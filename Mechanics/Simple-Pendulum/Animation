@@ -1,0 +1,83 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import clear_output
+import time
+
+g = 9.81
+
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def pendulo_simples(theta0, omega0, L, t_max=10, dt=0.02):
+
+    theta = np.radians(theta0)
+    omega = omega0
+
+    t_vals = []
+    theta_vals = []
+
+    for t in np.arange(0, t_max, dt):
+
+        alpha = -(g / L) * np.sin(theta)
+
+        omega += alpha * dt
+        theta += omega * dt
+
+        t_vals.append(t)
+        theta_vals.append(theta)
+
+    return np.array(t_vals), np.array(theta_vals)
+
+
+# ---------------------------
+# ANIMAÇÃO
+# ---------------------------
+def simular(theta0, w0, L):
+
+    t_vals, theta_vals = pendulo_simples(theta0, w0, L)
+
+    x = L * np.sin(theta_vals)
+    y = -L * np.cos(theta_vals)
+
+    limite = L * 1.2
+
+    for i in range(0, len(t_vals), 5):
+
+        clear_output(wait=True)
+
+        fig, ax = plt.subplots(figsize=(5,5))
+
+        # haste
+        ax.plot([0, x[i]], [0, y[i]], 'k-', lw=2)
+
+        # massa
+        ax.plot(x[i], y[i], 'ro', markersize=10)
+
+        # trajetória
+        ax.plot(x[:i], y[:i], 'r-', alpha=0.5)
+
+        ax.set_xlim(-limite, limite)
+        ax.set_ylim(-limite, limite)
+
+        ax.set_aspect('equal')
+        ax.grid(alpha=0.3)
+
+        ax.set_title(f"Pêndulo Simples (t = {t_vals[i]:.2f} s)")
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("y (m)")
+
+        plt.show()
+
+        time.sleep(0.02)
+
+
+# ---------------------------
+# WIDGETS
+# ---------------------------
+widgets.interact(
+    simular,
+    theta0=widgets.FloatSlider(min=1, max=170, step=1, value=30, description="θ₀ (°)"),
+    w0=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω₀ (rad/s)"),
+    L=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L (m)")
+);
