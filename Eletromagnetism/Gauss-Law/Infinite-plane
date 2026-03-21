@@ -1,0 +1,77 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constante SI
+epsilon0 = 8.85e-12
+
+sigma0 = 1e-6  # C/m²
+
+def plot_field(sign):
+
+    sigma = sign * sigma0
+    E = sigma / (2 * epsilon0)  # N/C
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+
+    # ========================
+    # 1D: campo constante
+    # ========================
+    y = np.linspace(-2, 2, 200)
+    E_values = np.ones_like(y) * E
+
+    ax1.plot(y, E_values)
+    ax1.set_xlabel("posição (m)")
+    ax1.set_ylabel("E (N/C)")
+    ax1.set_title("Campo Elétrico E(r)")
+    ax1.grid()
+
+    # ========================
+    # 2D: linhas de campo
+    # ========================
+    ax2.set_xlim(-2, 2)
+    ax2.set_ylim(-2, 2)
+    ax2.set_aspect('equal')
+
+    # placa no centro
+    ax2.axhline(0, linewidth=3)
+
+    # posições laterais das linhas
+    x_positions = np.linspace(-1.5, 1.5, 7)
+
+    for x in x_positions:
+        if sigma > 0:
+            # SAINDO (divergente)
+            
+            # acima
+            ax2.plot([x, x], [0, 1.5], linewidth=2)
+            ax2.arrow(x, 1.2, 0, 0.2, head_width=0.08, length_includes_head=True)
+
+            # abaixo
+            ax2.plot([x, x], [0, -1.5], linewidth=2)
+            ax2.arrow(x, -1.2, 0, -0.2, head_width=0.08, length_includes_head=True)
+
+        else:
+            # ENTRANDO (convergente)
+
+            # acima
+            ax2.plot([x, x], [1.5, 0], linewidth=2)
+            ax2.arrow(x, 1.2, 0, -0.2, head_width=0.08, length_includes_head=True)
+
+            # abaixo
+            ax2.plot([x, x], [-1.5, 0], linewidth=2)
+            ax2.arrow(x, -1.2, 0, 0.2, head_width=0.08, length_includes_head=True)
+
+    ax2.set_title("Field Lines (Convergence/Divergence)")
+    ax2.grid()
+
+    plt.show()
+
+
+# Widget
+sign_toggle = widgets.ToggleButtons(
+    options=[('+', 1), ('-', -1)],
+    description='Placa:'
+)
+
+widgets.interactive(plot_field, sign=sign_toggle)
