@@ -1,0 +1,70 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# ---------------------------
+# SIMULAÇÃO RC
+# ---------------------------
+def simular_RC(R, C_micro, V0, t_max=5, dt=0.001, modo="Carga"):
+
+    C = C_micro * 1e-6  # conversão µF → F
+
+    t_vals = []
+    Vc_vals = []
+    I_vals = []
+
+    Vc = 0 if modo == "Carga" else V0
+
+    for t in np.arange(0, t_max, dt):
+
+        if modo == "Carga":
+            dVc_dt = (V0 - Vc) / (R * C)
+        else:
+            dVc_dt = -Vc / (R * C)
+
+        Vc += dVc_dt * dt
+
+        I = (V0 - Vc) / R if modo == "Carga" else (-Vc / R)
+
+        t_vals.append(t)
+        Vc_vals.append(Vc)
+        I_vals.append(I)
+
+    return np.array(t_vals), np.array(Vc_vals), np.array(I_vals)
+
+
+# ---------------------------
+# PLOT
+# ---------------------------
+def plotar_RC(R, C_micro, V0, modo):
+
+    t, Vc, I = simular_RC(R, C_micro, V0, modo=modo)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
+
+    ax1.plot(t, Vc)
+    ax1.set_title("Tensão no Capacitor")
+    ax1.set_xlabel("Tempo (s)")
+    ax1.set_ylabel("Vc (V)")
+    ax1.grid()
+
+    ax2.plot(t, I)
+    ax2.set_title("Corrente no Circuito")
+    ax2.set_xlabel("Tempo (s)")
+    ax2.set_ylabel("I (A)")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ---------------------------
+# INTERFACE
+# ---------------------------
+widgets.interact(
+    plotar_RC,
+    R=widgets.FloatSlider(min=1, max=1000, step=1, value=100, description="R (Ω)"),
+    C_micro=widgets.FloatSlider(min=1, max=1000, step=1, value=100, description="C (µF)"),
+    V0=widgets.FloatSlider(min=1, max=10, step=0.5, value=5, description="V0 (V)"),
+    modo=widgets.Dropdown(options=["Carga", "Descarga"], value="Carga")
+);
