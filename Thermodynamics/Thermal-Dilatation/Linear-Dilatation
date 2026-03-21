@@ -1,0 +1,76 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import clear_output
+
+plt.rcParams["mathtext.fontset"] = "stix"
+
+def animar(L0, alpha_micro, delta_T):
+
+    clear_output(wait=True)
+
+    alpha = alpha_micro * 1e-6  # conversão para SI
+
+    Ti = 300  # K
+    T = Ti + delta_T
+
+    # dilatação linear
+    delta_L = L0 * alpha * delta_T
+    L_atual = L0 + delta_L
+
+    # conversão para micrômetros
+    delta_um = delta_L * 1e6
+
+    plt.clf()
+    fig, ax = plt.subplots(figsize=(8, 2))
+
+    # escala visual
+    k = 1e5
+    L_vis = L0 + k * delta_L
+
+    ax.set_xlim(0, L0 + k * abs(delta_L) * 5 + 0.1)
+    ax.set_ylim(-1, 1)
+
+    # barra inicial
+    ax.plot([0, L0], [0, 0], '--', lw=2, label="Comprimento inicial")
+
+    # barra deformada
+    ax.plot([0, L_vis], [0, 0], lw=8, label="Comprimento atual")
+
+    ax.set_title("Dilatação Linear")
+
+    ax.set_xlabel("Comprimento (m)")
+    ax.set_yticks([])
+
+    ax.text(0.02, 0.8,
+        rf"$T = {T:.1f}\ \mathrm{{K}}$" "\n"
+        rf"$\Delta T = {delta_T:.1f}\ \mathrm{{K}}$" "\n"
+        rf"$L = {L_atual:.6f}\ \mathrm{{m}}$" "\n"
+        rf"$\Delta L = {delta_um:.3f}\ \mu\mathrm{{m}}$" "\n"
+        rf"$\alpha = {alpha_micro:.2f} \times 10^{{-6}}\ \mathrm{{K}}^{{-1}}$",
+        transform=ax.transAxes
+    )
+
+    ax.legend(loc="lower right")
+
+    plt.show()
+
+
+widgets.interact(
+    animar,
+
+    L0=widgets.FloatSlider(
+        value=1.0, min=0.5, max=3.0, step=0.1,
+        description="L0 (m)"
+    ),
+
+    alpha_micro=widgets.FloatSlider(
+        value=12, min=1, max=50, step=1,
+        description="α (×10⁻⁶ K⁻¹)"
+    ),
+
+    delta_T=widgets.FloatSlider(
+        value=0, min=-200, max=200, step=5,
+        description="ΔT (K)"
+    )
+)
