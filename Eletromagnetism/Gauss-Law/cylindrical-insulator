@@ -1,0 +1,124 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constante SI
+epsilon0 = 8.85e-12
+
+# Raio do cilindro (m)
+R = 1.0
+
+# Densidade volumétrica (C/m^3)
+rho0 = 1e-6
+
+# Campo elétrico (escala radial)
+def E_scalar(rho, r):
+    if r < R:
+        return rho * r / (2 * epsilon0)
+    else:
+        return rho * R**2 / (2 * epsilon0 * r)
+
+# Campo vetorial
+def E_vector(x, y, rho):
+    r = np.sqrt(x**2 + y**2) + 1e-12
+    
+    if r < R:
+        factor = rho / (2 * epsilon0)
+        return factor * x, factor * y
+    
+    factor = rho * R**2 / (2 * epsilon0 * r**2)
+    return factor * x, factor * y
+
+# ------------------------
+# PLOT
+# ------------------------
+def plot_all(r_point, sign):
+
+    rho = sign * rho0
+
+    fig = plt.figure(figsize=(12,5))
+
+    # ========================
+    # 1D: E(r)
+    # ========================
+    ax1 = fig.add_subplot(1,2,1)
+
+    r_values = np.linspace(0.01, 3*R, 500)
+    E_values = [E_scalar(rho, r) for r in r_values]
+
+    ax1.plot(r_values, E_values)
+    ax1.axvline(r_point, linestyle='--')
+    ax1.scatter([r_point], [E_scalar(rho, r_point)], color='red')
+
+    ax1.set_xlabel("r (m)")
+    ax1.set_ylabel("E (N/C)")
+    ax1.set_title("Cilindro Isolante — E(r)")
+    ax1.grid()
+
+    # ========================
+    # 2D: linhas de campo
+    # ========================
+    ax2 = fig.add_subplot(1,2,2)
+
+    x = np.linspace(-2.5*R, 2.5*R, 35)
+    y = np.linspace(-2.5*R, 2.5*R, 35)
+    X, Y = np.meshgrid(x, y)
+
+    Ex = np.zeros_like(X)
+    Ey = np.zeros_like(Y)
+
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            ex, ey = E_vector(X[i,j], Y[i,j], rho)
+            Ex[i,j] = ex
+            Ey[i,j] = ey
+
+    # cilindro (representado como círculo)
+    circle = plt.Circle((0,0), R, color='lightblue', alpha=0.5)
+    ax2.add_patch(circle)
+
+    # magnitude
+    magnitude = np.sqrt(Ex**2 + Ey**2)
+
+    # normalização
+    magnitude[magnitude == 0] = 1
+    Ex_dir = Ex / magnitude
+    Ey_dir = Ey / magnitude
+
+    ax2.streamplot(
+        X, Y,
+        Ex_dir, Ey_dir,
+        color=magnitude,
+        cmap='plasma',
+        density=2
+    )
+
+    # ponto
+    ax2.scatter([r_point], [0], color='red')
+
+    ax2.set_xlim(-2.5*R, 2.5*R)
+    ax2.set_ylim(-2.5*R, 2.5*R)
+    ax2.set_aspect('equal')
+
+    ax2.set_title("Cylindrical Isolating Field")
+    ax2.grid()
+
+    plt.show()
+
+# ------------------------
+# Widgets
+# ------------------------
+slider_r = widgets.FloatSlider(
+    value=1.5,
+    min=0.01,
+    max=2.5*R,
+    step=0.01,
+    description='r (m):'
+)
+
+sign_toggle = widgets.ToggleButtons(
+    options=[('+', 1), ('-', -1)],
+    description='Charge:'
+)
+
+widgets.interactive(plot_all, r_point=slider_r, sign=sign_toggle)
