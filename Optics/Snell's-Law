@@ -1,0 +1,90 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import clear_output
+
+# =========================
+# SIMULAÇÃO SNELL
+# =========================
+def simular(n1, n2, theta1):
+
+    theta1_rad = np.radians(theta1)
+
+    # Lei de Snell
+    sin_theta2 = (n1 / n2) * np.sin(theta1_rad)
+
+    if abs(sin_theta2) <= 1:
+        theta2 = np.degrees(np.arcsin(sin_theta2))
+        total_reflexao = False
+    else:
+        theta2 = None
+        total_reflexao = True
+
+    # =========================
+    # DESENHO
+    # =========================
+    clear_output(wait=True)
+
+    fig, ax = plt.subplots(figsize=(6,6))
+
+    # interface
+    ax.axhline(0, color='black', lw=2)
+
+    # normal
+    ax.axvline(0, color='gray', linestyle='--')
+
+    # raio incidente
+    x_inc = np.linspace(-2, 0, 100)
+    y_inc = np.tan(theta1_rad) * x_inc
+
+    ax.plot(x_inc, y_inc, 'b', label="Incidente")
+
+    # raio refratado
+    if not total_reflexao:
+        theta2_rad = np.radians(theta2)
+        x_ref = np.linspace(0, 2, 100)
+        y_ref = np.tan(theta2_rad) * x_ref
+
+        ax.plot(x_ref, y_ref, 'r', label="Refratado")
+
+    else:
+        # reflexão total interna
+        x_ref = np.linspace(0, 2, 100)
+        y_ref = np.tan(theta1_rad) * x_ref
+
+        ax.plot(x_ref, y_ref, 'orange', linestyle='--', label="Reflexão total")
+
+    # região dos meios
+    ax.fill_between([-2, 2], 0, 2, color='lightblue', alpha=0.3)
+    ax.fill_between([-2, 2], -2, 0, color='lightgreen', alpha=0.3)
+
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-2, 2)
+
+    ax.set_title("Lei de Snell")
+    ax.legend()
+    ax.grid(alpha=0.3)
+
+    plt.show()
+
+    # =========================
+    # INFO
+    # =========================
+    print(f"n1 = {n1}")
+    print(f"n2 = {n2}")
+    print(f"θ1 = {theta1:.2f}°")
+
+    if not total_reflexao:
+        print(f"θ2 = {theta2:.2f}°")
+    else:
+        print("Reflexão total interna!")
+
+# =========================
+# INTERFACE
+# =========================
+widgets.interact(
+    simular,
+    n1=widgets.FloatSlider(min=1.0, max=2.5, step=0.1, value=1.0, description="n1"),
+    n2=widgets.FloatSlider(min=1.0, max=2.5, step=0.1, value=1.5, description="n2"),
+    theta1=widgets.FloatSlider(min=0, max=89, step=1, value=30, description="θ incidência (°)")
+)
