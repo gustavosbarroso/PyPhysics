@@ -1,0 +1,124 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from ipywidgets import interact
+from IPython.display import clear_output
+import time
+
+def simular_acoplados(m, k, kc, x1_0, x2_0, v1_0, v2_0):
+
+    dt = 0.01
+    t_max = 20
+    t = np.arange(0, t_max, dt)
+
+    x1, x2 = x1_0, x2_0
+    v1, v2 = v1_0, v2_0
+
+    x1_vals, x2_vals = [], []
+    E_vals = []
+
+    # ---------------------------
+    # SIMULAÇÃO
+    # ---------------------------
+    for _ in t:
+
+        a1 = (-k*x1 + kc*(x2 - x1)) / m
+        a2 = (-k*x2 + kc*(x1 - x2)) / m
+
+        v1 += a1 * dt
+        v2 += a2 * dt
+        x1 += v1 * dt
+        x2 += v2 * dt
+
+        Ec = 0.5*m*(v1**2 + v2**2)
+        Ep = 0.5*k*(x1**2 + x2**2) + 0.5*kc*(x2 - x1)**2
+        E = Ec + Ep
+
+        x1_vals.append(x1)
+        x2_vals.append(x2)
+        E_vals.append(E)
+
+    # -------- DETECÇÃO DE MODO --------
+    if abs(x1_0 - x2_0) < 1e-2:
+        modo = "Modo simétrico"
+    elif abs(x1_0 + x2_0) < 1e-2:
+        modo = "Modo antissimétrico"
+    else:
+        modo = "Batimento"
+
+    # ---------------------------
+    # ANIMAÇÃO
+    # ---------------------------
+    L = 5  # posição das paredes
+
+    for i in range(0, len(t), 10):
+        clear_output(wait=True)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,4))
+
+        # ---------------------------
+        # SISTEMA FÍSICO
+        # ---------------------------
+        # paredes
+        ax1.plot([-L, -L], [-1, 1], 'k', lw=3)
+        ax1.plot([L, L], [-1, 1], 'k', lw=3)
+
+        # massas (posições no eixo x)
+        X1 = -1 + x1_vals[i]
+        X2 =  1 + x2_vals[i]
+
+        # molas (linhas simples)
+        ax1.plot([-L, X1], [0, 0], 'g--')
+        ax1.plot([X1, X2], [0, 0], 'g--')
+        ax1.plot([X2, L], [0, 0], 'g--')
+
+        # massas
+        ax1.plot(X1, 0, 'ro', markersize=10)
+        ax1.plot(X2, 0, 'bo', markersize=10)
+
+        ax1.set_xlim(-L, L)
+        ax1.set_ylim(-1, 1)
+        ax1.set_title(f"Sistema acoplado (t = {t[i]:.2f} s)")
+        ax1.set_xlabel("x (m)")
+        ax1.set_yticks([])
+        ax1.grid(alpha=0.3)
+
+        # ---------------------------
+        # GRÁFICO DINÂMICO
+        # ---------------------------
+        ax2.plot(t[:i], x1_vals[:i], 'r-', label="x1 (m)")
+        ax2.plot(t[:i], x2_vals[:i], 'b-', label="x2 (m)")
+
+        ax2.set_xlim(0, t_max)
+        ax2.set_ylim(
+            1.2*min(min(x1_vals), min(x2_vals)),
+            1.2*max(max(x1_vals), max(x2_vals))
+        )
+
+        ax2.set_title("Posições ao longo do tempo")
+        ax2.set_xlabel("t (s)")
+        ax2.set_ylabel("x (m)")
+        ax2.legend()
+        ax2.grid(alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Modo: {modo}")
+
+        time.sleep(0.03)
+
+
+# ---------------------------
+# INTERFACE
+# ---------------------------
+interact(
+    simular_acoplados,
+    m=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="m (kg)"),
+    k=widgets.FloatSlider(min=0.5, max=10, step=0.5, value=2, description="k (N/m)"),
+    kc=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1, description="k_c (N/m)"),
+    x1_0=widgets.FloatSlider(min=-2, max=2, step=0.1, value=1, description="x1 (m)"),
+    x2_0=widgets.FloatSlider(min=-2, max=2, step=0.1, value=-1, description="x2 (m)"),
+    v1_0=widgets.FloatSlider(min=-2, max=2, step=0.1, value=0, description="v1 (m/s)"),
+    v2_0=widgets.FloatSlider(min=-2, max=2, step=0.1, value=0, description="v1 (m/s)")
+)
