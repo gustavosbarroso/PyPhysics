@@ -1,0 +1,109 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constante SI
+epsilon0 = 8.85e-12
+
+# Densidade linear (C/m)
+lambda0 = 1e-9  # valor base
+
+# Campo elétrico (fio infinito)
+def E(r, lam):
+    return lam / (2 * np.pi * epsilon0 * r)
+
+# Campo vetorial
+def E_vector(x, y, lam):
+    r = np.sqrt(x**2 + y**2) + 1e-12
+    
+    Ex = lam / (2 * np.pi * epsilon0) * x / r**2
+    Ey = lam / (2 * np.pi * epsilon0) * y / r**2
+    
+    return Ex, Ey
+
+# ------------------------
+# PLOT
+# ------------------------
+def plot_all(r_point, sign):
+
+    lam = sign * lambda0
+
+    fig = plt.figure(figsize=(12,5))
+
+    # ========================
+    # 1D: E(r)
+    # ========================
+    ax1 = fig.add_subplot(1,2,1)
+
+    r_values = np.linspace(0.01, 3, 500)
+    E_values = E(r_values, lam)
+
+    ax1.plot(r_values, E_values)
+    ax1.axvline(r_point, linestyle='--')
+    ax1.scatter([r_point], [E(r_point, lam)], color='red')
+
+    ax1.set_xlabel("r (m)")
+    ax1.set_ylabel("E (N/C)")
+    ax1.set_title("E(r) — Fio Infinito")
+    ax1.grid()
+
+    # ========================
+    # 2D: linhas de campo
+    # ========================
+    ax2 = fig.add_subplot(1,2,2)
+
+    x = np.linspace(-2.5, 2.5, 30)
+    y = np.linspace(-2.5, 2.5, 30)
+    X, Y = np.meshgrid(x, y)
+
+    Ex = np.zeros_like(X)
+    Ey = np.zeros_like(Y)
+
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            ex, ey = E_vector(X[i,j], Y[i,j], lam)
+            Ex[i,j] = ex
+            Ey[i,j] = ey
+
+    # normalização (direção)
+    magnitude = np.sqrt(Ex**2 + Ey**2)
+    magnitude[magnitude == 0] = 1
+
+    Ex_dir = Ex / magnitude
+    Ey_dir = Ey / magnitude
+
+    # linhas de campo
+    ax2.streamplot(X, Y, Ex_dir, Ey_dir, color=magnitude, cmap='plasma', density=2)
+
+    # fio (centro)
+    ax2.plot(0, 0, 'ko', markersize=6)
+
+    # ponto
+    ax2.scatter([r_point], [0], color='red')
+
+    ax2.set_xlim(-2.5, 2.5)
+    ax2.set_ylim(-2.5, 2.5)
+    ax2.set_aspect('equal')
+
+    ax2.set_title("Electric Field Lines (Cylindrical Symmetry)")
+    ax2.grid()
+
+    plt.show()
+
+# ------------------------
+# Widgets
+# ------------------------
+slider_r = widgets.FloatSlider(
+    value=1.5,
+    min=0.1,
+    max=3,
+    step=0.01,
+    description='r (m):'
+)
+
+sign_toggle = widgets.ToggleButtons(
+    options=[('+', 1), ('-', -1)],
+    description='Charge:'
+)
+
+widgets.interactive(plot_all, r_point=slider_r, sign=sign_toggle)
