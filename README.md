@@ -14,7 +14,9 @@ To ensure proper functionality and visualization, the code is organized into cel
 Before running any simulation, execute the first cell, which contains all required imports and visualization settings:
 
 import numpy as np
+
 import matplotlib.pyplot as plt
+
 import ipywidgets as widgets
 
 plt.style.use('seaborn-v0_8-darkgrid')
