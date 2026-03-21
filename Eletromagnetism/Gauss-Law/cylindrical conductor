@@ -1,0 +1,122 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constante SI
+epsilon0 = 8.85e-12
+
+R = 1.0
+
+# densidade linear (C/m)
+lambda0 = 1e-6
+
+# campo escalar
+def E_scalar(rho_sign, r):
+    
+    lam = rho_sign * lambda0
+    
+    if r < R:
+        return 0.0
+    else:
+        return lam / (2 * np.pi * epsilon0 * r)
+
+# campo vetorial
+def E_vector(x, y, sign):
+
+    r = np.sqrt(x**2 + y**2) + 1e-12
+    
+    lam = sign * lambda0
+    
+    if r < R:
+        return 0.0, 0.0
+    
+    factor = lam / (2 * np.pi * epsilon0 * r**2)
+    
+    return factor * x, factor * y
+
+# ------------------------
+# PLOT
+# ------------------------
+def plot_condutor(r_point, sign):
+
+    fig = plt.figure(figsize=(12,5))
+
+    # ========================
+    # 1D
+    # ========================
+    ax1 = fig.add_subplot(1,2,1)
+
+    r_values = np.linspace(0.01, 3*R, 500)
+    E_values = [E_scalar(sign, r) for r in r_values]
+
+    ax1.plot(r_values, E_values)
+    ax1.axvline(r_point, linestyle='--')
+    ax1.scatter([r_point], [E_scalar(sign, r_point)], color='red')
+
+    ax1.set_xlabel("r (m)")
+    ax1.set_ylabel("E (N/C)")
+    ax1.set_title("Cilindro Condutor — E(r)")
+    ax1.grid()
+
+    # ========================
+    # 2D
+    # ========================
+    ax2 = fig.add_subplot(1,2,2)
+
+    x = np.linspace(-2.5*R, 2.5*R, 35)
+    y = np.linspace(-2.5*R, 2.5*R, 35)
+    X, Y = np.meshgrid(x, y)
+
+    Ex = np.zeros_like(X)
+    Ey = np.zeros_like(Y)
+
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            ex, ey = E_vector(X[i,j], Y[i,j], sign)
+            Ex[i,j] = ex
+            Ey[i,j] = ey
+
+    # cilindro
+    circle = plt.Circle((0,0), R, color='lightblue', alpha=0.5)
+    ax2.add_patch(circle)
+
+    # normalização
+    mag = np.sqrt(Ex**2 + Ey**2)
+    mag[mag == 0] = 1
+
+    ax2.streamplot(
+        X, Y,
+        Ex/mag, Ey/mag,
+        color=mag,
+        cmap='plasma',
+        density=2
+    )
+
+    ax2.scatter([r_point], [0], color='red')
+
+    ax2.set_xlim(-2.5*R, 2.5*R)
+    ax2.set_ylim(-2.5*R, 2.5*R)
+    ax2.set_aspect('equal')
+
+    ax2.set_title("Conducting Cylinder Field")
+    ax2.grid()
+
+    plt.show()
+
+# ------------------------
+# Widgets
+# ------------------------
+slider_r = widgets.FloatSlider(
+    value=1.5,
+    min=0.01,
+    max=2.5*R,
+    step=0.01,
+    description='r (m):'
+)
+
+sign_toggle = widgets.ToggleButtons(
+    options=[('+', 1), ('-', -1)],
+    description='Charge:'
+)
+
+widgets.interactive(plot_condutor, r_point=slider_r, sign=sign_toggle)
