@@ -1,0 +1,220 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import clear_output
+
+# =========================
+# BANCO DE MATERIAIS
+# =========================
+materiais = {
+    "Água": {
+        "Tf": 0,
+        "Tb": 100,
+        "c_s": 2100,
+        "c_l": 4186,
+        "c_g": 2000,
+        "Lf": 3.34e5,
+        "Lv": 2.26e6
+    },
+    "Etanol": {
+        "Tf": -114,
+        "Tb": 78,
+        "c_s": 2400,
+        "c_l": 2440,
+        "c_g": 1800,
+        "Lf": 1.0e5,
+        "Lv": 8.5e5
+    },
+    "Ferro": {
+        "Tf": 1538,
+        "Tb": 2862,
+        "c_s": 450,
+        "c_l": 820,
+        "c_g": 1000,
+        "Lf": 2.5e5,
+        "Lv": 6.3e6
+    },
+    "Alumínio": {
+        "Tf": 660,
+        "Tb": 2470,
+        "c_s": 900,
+        "c_l": 1170,
+        "c_g": 1000,
+        "Lf": 3.97e5,
+        "Lv": 1.05e7
+    },
+    "Chumbo": {
+        "Tf": 327,
+        "Tb": 1749,
+        "c_s": 130,
+        "c_l": 160,
+        "c_g": 500,
+        "Lf": 2.3e4,
+        "Lv": 8.7e5
+    },
+    "Custom": {
+        "Tf": 0,
+        "Tb": 100,
+        "c_s": 2000,
+        "c_l": 4000,
+        "c_g": 2000,
+        "Lf": 3e5,
+        "Lv": 2e6
+    }
+}
+
+# =========================
+# SIMULAÇÃO
+# =========================
+def simular(material, m, T0, potencia):
+
+    props = materiais[material]
+
+    Tf = props["Tf"]
+    Tb = props["Tb"]
+    c_s = props["c_s"]
+    c_l = props["c_l"]
+    c_g = props["c_g"]
+    Lf = props["Lf"]
+    Lv = props["Lv"]
+
+    dt = 0.2
+    t_max = 120
+
+    E = 0  # energia total acumulada
+
+    T = T0
+
+    T_vals = []
+    t_vals = []
+    fase_vals = []
+
+    for t in np.arange(0, t_max, dt):
+
+        E += potencia * dt
+
+        # =========================
+        # SÓLIDO
+        # =========================
+        if T < Tf:
+            E_needed = m * c_s * (Tf - T)
+
+            if E >= E_needed:
+                E -= E_needed
+                T = Tf
+                fase = "Fusão"
+            else:
+                T += E / (m * c_s)
+                E = 0
+                fase = "Sólido"
+
+        # =========================
+        # FUSÃO
+        # =========================
+        elif T == Tf:
+            E_needed = m * Lf
+
+            if E >= E_needed:
+                E -= E_needed
+                T = Tf + 0.01
+                fase = "Líquido"
+            else:
+                fase = "Fusão"
+
+        # =========================
+        # LÍQUIDO
+        # =========================
+        elif Tf < T < Tb:
+            E_needed = m * c_l * (Tb - T)
+
+            if E >= E_needed:
+                E -= E_needed
+                T = Tb
+                fase = "Vaporização"
+            else:
+                T += E / (m * c_l)
+                E = 0
+                fase = "Líquido"
+
+        # =========================
+        # VAPORIZAÇÃO
+        # =========================
+        elif T == Tb:
+            E_needed = m * Lv
+
+            if E >= E_needed:
+                E -= E_needed
+                T = Tb + 0.01
+                fase = "Gás"
+            else:
+                fase = "Vaporização"
+
+        # =========================
+        # GÁS
+        # =========================
+        else:
+            T += E / (m * c_g)
+            E = 0
+            fase = "Gás"
+
+        T_vals.append(T)
+        t_vals.append(t)
+        fase_vals.append(fase)
+
+    # =========================
+    # ANIMAÇÃO
+    # =========================
+    for i in range(0, len(t_vals), 4):
+
+        clear_output(wait=True)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,4))
+
+        cores = {
+            "Sólido": "blue",
+            "Fusão": "cyan",
+            "Líquido": "green",
+            "Vaporização": "orange",
+            "Gás": "red"
+        }
+
+        fase_i = fase_vals[i]
+
+        ax1.fill_between([0,1], 0, 1, color=cores[fase_i])
+        ax1.set_title(f"Fase: {fase_i}")
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+
+        ax2.plot(t_vals[:i], T_vals[:i], 'r-', lw=2)
+
+        ax2.set_xlim(0, t_max)
+        ax2.set_ylim(min(T_vals)-10, max(T_vals)+10)
+
+        ax2.set_xlabel("Tempo (s)")
+        ax2.set_ylabel("Temperatura (°C)")
+        ax2.set_title(f"{material}")
+        ax2.grid(alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Material: {material}")
+        print(f"Tempo = {t_vals[i]:.1f} s")
+        print(f"Temperatura = {T_vals[i]:.1f} °C")
+        print(f"Fase = {fase_i}")
+
+
+# =========================
+# INTERFACE
+# =========================
+widgets.interact(
+    simular,
+    material=widgets.Dropdown(
+        options=list(materiais.keys()),
+        value="Água",
+        description="Material"
+    ),
+    m=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="massa (kg)"),
+    T0=widgets.FloatSlider(min=-200, max=200, step=5, value=-20, description="T₀ (°C)"),
+    potencia=widgets.FloatSlider(min=500, max=5000, step=500, value=2000, description="Potência (W)")
+)
