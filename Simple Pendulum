@@ -1,1 +1,149 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
 
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def simular(theta0_graus, comparar, comparar_linear, slide, mostrar_resposta):
+
+    g = 9.81
+    L = 1
+    dt = 0.05
+    t_max = 20
+
+    def resolver(theta0):
+        theta = theta0
+        omega = 0
+
+        t_vals = []
+        theta_vals = []
+        energia_vals = []
+
+        for t in np.arange(0, t_max, dt):
+            alpha = -(g/L)*np.sin(theta)
+
+            omega += alpha * dt
+            theta += omega * dt
+
+            # Energia mecânica
+            E = 0.5*(L*omega)**2 + g*L*(1 - np.cos(theta))
+
+            t_vals.append(t)
+            theta_vals.append(theta)
+            energia_vals.append(E)
+
+        return t_vals, theta_vals, energia_vals
+
+    # -------- RESOLUÇÃO --------
+    t1, th1, E1 = resolver(np.radians(theta0_graus))
+
+    # -------- PLOT --------
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
+
+    # θ(t)
+    ax1.plot(t1, th1, label=f"θ₀ = {theta0_graus}°")
+
+    if comparar:
+        t2, th2, _ = resolver(np.radians(theta0_graus + 1))
+        ax1.plot(t2, th2, '--', label=f"θ₀ = {theta0_graus+1}°")
+
+    if comparar_linear:
+        omega0 = np.sqrt(g/L)
+        th_lin = np.radians(theta0_graus)*np.cos(omega0*np.array(t1))
+        ax1.plot(t1, th_lin, ':', label="Aprox. linear")
+
+    ax1.set_xlabel("Tempo")
+    ax1.set_ylabel("θ (rad)")
+    ax1.set_title("Pêndulo simples")
+    ax1.legend()
+    ax1.grid()
+
+    # Energia
+    ax2.plot(t1, E1)
+    ax2.set_title("Energia mecânica")
+    ax2.set_xlabel("Tempo")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+    print("\n" + "="*50)
+
+    # ---------------------------
+    # PERGUNTAS + RESPOSTAS (SEU FORMATO)
+    # ---------------------------
+
+    if slide == "Explorar":
+        print("👀 Perguntas:")
+        print("- O movimento parece sempre igual?")
+        print("- O período muda com o ângulo?")
+
+        if mostrar_resposta:
+            print("\n✅ Respostas:")
+            print("- Não, o movimento muda para ângulos grandes.")
+            print("- Sim, o período aumenta com o ângulo.")
+
+    elif slide == "Pequenos vs grandes ângulos":
+        print("⚖️ Perguntas:")
+        print("- Qual demora mais para oscilar?")
+        print("- Isso bate com a fórmula tradicional?")
+
+        if mostrar_resposta:
+            print("\n✅ Respostas:")
+            print("- Ângulos maiores → maior período.")
+            print("- Não, pois a fórmula clássica ignora a amplitude.")
+
+    elif slide == "Aproximação":
+        print("🧠 Perguntas:")
+        print("- Quando sin(θ) ≈ θ funciona bem?")
+        print("- O que falha para ângulos grandes?")
+
+        if mostrar_resposta:
+            print("\n✅ Respostas:")
+            print("- Funciona para ângulos pequenos (~até 10°).")
+            print("- O seno cresce mais lentamente → movimento desacelera.")
+
+    elif slide == "Energia":
+        print("⚡ Perguntas:")
+        print("- A energia total muda com o tempo?")
+        print("- Onde ela está armazenada?")
+
+        if mostrar_resposta:
+            print("\n✅ Respostas:")
+            print("- Não, a energia mecânica é conservada.")
+            print("- Parte cinética (movimento) e parte potencial (altura).")
+
+    elif slide == "Forma do movimento":
+        print("📉 Perguntas:")
+        print("- O gráfico é uma senoide perfeita?")
+        print("- O que muda para ângulos grandes?")
+
+        if mostrar_resposta:
+            print("\n✅ Respostas:")
+            print("- Só para ângulos pequenos.")
+            print("- O gráfico achata nos extremos → sistema não linear.")
+
+# ---------------------------
+# INTERFACE
+# ---------------------------
+widgets.interact(
+    simular,
+    theta0_graus=widgets.IntSlider(min=1, max=170, step=1, value=30),
+    comparar=widgets.Checkbox(value=False, description="Comparar θ₀ + 1°"),
+    comparar_linear=widgets.Checkbox(value=False, description="Comparar linear"),
+    slide=widgets.Dropdown(
+        options=[
+            "Explorar",
+            "Pequenos vs grandes ângulos",
+            "Aproximação",
+            "Energia",
+            "Forma do movimento"
+        ],
+        value="Explorar"
+    ),
+    mostrar_resposta=widgets.Checkbox(
+        value=False,
+        description="Mostrar resposta"
+    )
+);
