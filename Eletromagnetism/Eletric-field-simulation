@@ -1,0 +1,72 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constantes
+k = 8.99e9  # 1/(4πϵ0)
+
+# Campo de uma carga pontual
+def E_point(q, rx, ry, xq, yq):
+    dx = rx - xq
+    dy = ry - yq
+    
+    r2 = dx**2 + dy**2
+    r = np.sqrt(r2) + 1e-9  # evitar divisão por zero
+    
+    Ex = k * q * dx / (r**3)
+    Ey = k * q * dy / (r**3)
+    
+    return Ex, Ey
+
+# Campo total (1 ou 2 cargas)
+def E_total(q1, x1, y1, q2=None, x2=None, y2=None):
+    
+    # grid
+    x = np.linspace(-3, 3, 40)
+    y = np.linspace(-3, 3, 40)
+    X, Y = np.meshgrid(x, y)
+    
+    Ex, Ey = E_point(q1, X, Y, x1, y1)
+    
+    if q2 is not None:
+        Ex2, Ey2 = E_point(q2, X, Y, x2, y2)
+        Ex += Ex2
+        Ey += Ey2
+    
+    return X, Y, Ex, Ey
+
+# Plot
+def plot_field(mode, q1, q2, sign2):
+    
+    plt.figure(figsize=(6,6))
+    
+    # Cargas (posição em metros)
+    x1, y1 = -1.5, 0  # (m)
+    
+    if mode == "1 charge":
+        X, Y, Ex, Ey = E_total(q1, x1, y1)
+        
+        plt.scatter(x1, y1, color='red' if q1 > 0 else 'blue', s=100,
+                    label=f"q1 = {q1:.2e} C")
+    
+    else:
+        x2, y2 = 1.5, 0  # (m)
+        
+        # sinal da segunda carga
+        q2 = abs(q2) * sign2
+        
+        X, Y, Ex, Ey = E_total(q1, x1, y1, q2, x2, y2)
+        
+        plt.scatter(x1, y1, color='red' if q1 > 0 else 'blue', s=100,
+                    label=f"q1 = {q1:.2e} C")
+        plt.scatter(x2, y2, color='red' if q2 > 0 else 'blue', s=100,
+                    label=f"q2 = {q2:.2e} C")
+    
+    # Linhas de campo
+    plt.streamplot(X, Y, Ex, Ey, density=1.2)
+    
+    # Limites (m)
+    plt.xlim(-3, 3)
+    plt.ylim(-3, 3)
+    
+    plt
