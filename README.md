@@ -1,6 +1,6 @@
 📌 PyPhysics
 
-This project was developed with the assistance of Artificial Intelligence (AI) to support the creation of interactive physics simulations. The use of AI helped accelerate development, improve implementation details, and ensure more efficient and structured code.
+“This project was developed with the assistance of Artificial Intelligence (AI) to support the design and implementation of interactive physics simulations.”
 
 The main goal of PyPhysics is to support educators in making physics more engaging and visually accessible through interactive simulations. It is designed to help both students and teachers in Brazil and internationally, making physics concepts easier to understand through visualization and interaction.
 
