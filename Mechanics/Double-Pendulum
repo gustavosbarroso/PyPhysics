@@ -1,0 +1,128 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from scipy.integrate import solve_ivp
+from IPython.display import clear_output
+import time
+
+g = 9.81  # m/s²
+
+# ---------------------------
+# EDO
+# ---------------------------
+def pendulo_duplo(t, y, m1, m2, L1, L2):
+    theta1, w1, theta2, w2 = y
+
+    delta = theta2 - theta1
+
+    den1 = (m1 + m2)*L1 - m2*L1*np.cos(delta)**2
+
+    a1 = (
+        m2*L1*w1**2*np.sin(delta)*np.cos(delta)
+        + m2*g*np.sin(theta2)*np.cos(delta)
+        + m2*L2*w2**2*np.sin(delta)
+        - (m1 + m2)*g*np.sin(theta1)
+    ) / den1
+
+    den2 = (L2/L1)*den1
+
+    a2 = (
+        -m2*L2*w2**2*np.sin(delta)*np.cos(delta)
+        + (m1 + m2)*g*np.sin(theta1)*np.cos(delta)
+        - (m1 + m2)*L1*w1**2*np.sin(delta)
+        - (m1 + m2)*g*np.sin(theta2)
+    ) / den2
+
+    return [w1, a1, w2, a2]
+
+
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def simular(theta1, theta2, w1, w2, m1, m2, L1, L2):
+
+    y0 = [np.radians(theta1), w1, np.radians(theta2), w2]
+
+    t_span = (0, 10)
+    t_eval = np.linspace(0, 10, 400)
+
+    sol = solve_ivp(
+        pendulo_duplo,
+        t_span,
+        y0,
+        t_eval=t_eval,
+        args=(m1, m2, L1, L2),
+        method='RK45'
+    )
+
+    theta1 = sol.y[0]
+    theta2 = sol.y[2]
+
+    x1 = L1 * np.sin(theta1)
+    y1 = -L1 * np.cos(theta1)
+
+    x2 = x1 + L2 * np.sin(theta2)
+    y2 = y1 - L2 * np.cos(theta2)
+
+    limite = L1 + L2
+
+    for i in range(0, len(t_eval), 10):
+        clear_output(wait=True)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+
+        # ---------------------------
+        # PÊNDULO
+        # ---------------------------
+        ax1.plot([0, x1[i]], [0, y1[i]], 'k-', lw=2)
+        ax1.plot([x1[i], x2[i]], [y1[i], y2[i]], 'k-', lw=2)
+
+        ax1.plot(x1[i], y1[i], 'ro', label="m1")
+        ax1.plot(x2[i], y2[i], 'bo', label="m2")
+
+        ax1.set_xlim(-limite, limite)
+        ax1.set_ylim(-limite, limite)
+
+        ax1.set_title(f"Pêndulo Duplo (t = {t_eval[i]:.2f} s)")
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_aspect('equal')
+        ax1.grid(alpha=0.3)
+        ax1.legend()
+
+        # ---------------------------
+        # TRAJETÓRIA
+        # ---------------------------
+        ax2.plot(x1[:i], y1[:i], 'r-', alpha=0.7, label="massa 1")
+        ax2.plot(x2[:i], y2[:i], 'b-', alpha=0.7, label="massa 2")
+
+        ax2.set_xlim(-limite, limite)
+        ax2.set_ylim(-limite, limite)
+
+        ax2.set_title("Trajetórias no plano")
+        ax2.set_xlabel("x (m)")
+        ax2.set_ylabel("y (m)")
+        ax2.set_aspect('equal')
+        ax2.grid(alpha=0.3)
+        ax2.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+        time.sleep(0.03)
+
+
+# ---------------------------
+# WIDGETS
+# ---------------------------
+widgets.interact(
+    simular,
+    theta1=widgets.FloatSlider(min=0, max=180, step=5, value=120, description="θ1 (°)"),
+    theta2=widgets.FloatSlider(min=0, max=180, step=5, value=100, description="θ2 (°)"),
+    w1=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω1 (rad/s)"),
+    w2=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω2 (rad/s)"),
+    m1=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="m1 (kg)"),
+    m2=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="m2 (kg)"),
+    L1=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L1 (m)"),
+    L2=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L2 (m)"),
+);
