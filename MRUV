@@ -1,0 +1,52 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from ipywidgets import interact
+
+def simular(a, v0, x0, m):
+    t = np.linspace(0, 5, 100)
+
+    x = x0 + v0*t + 0.5*a*t**2
+    v = v0 + a*t
+    a_vals = np.full_like(t, a)
+
+    E = 0.5 * m * v**2   # energia cinética
+    F = m * a            # força
+
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(18,4))
+
+    # Posição
+    ax1.plot(t, x)
+    ax1.set_title("x(t)")
+    ax1.set_xlabel("t (s)")
+    ax1.set_ylabel("x (m)")
+
+    # Velocidade
+    ax2.plot(t, v)
+    ax2.set_title("v(t)")
+    ax2.set_xlabel("t (s)")
+    ax2.set_ylabel("v (m/s)")
+
+    # Aceleração
+    ax3.plot(t, a_vals)
+    ax3.set_title("a(t)")
+    ax3.set_xlabel("t (s)")
+    ax3.set_ylabel("a (m/s²)")
+
+    # Energia
+    ax4.plot(t, E)
+    ax4.set_title("E_c(t)")
+    ax4.set_xlabel("t (s)")
+    ax4.set_ylabel("Energia (J)")
+
+    plt.suptitle(f"Força resultante: F = {F:.2f} N")
+    plt.tight_layout()
+    plt.show()
+
+interact(
+    simular,
+    a=widgets.FloatSlider(min=-10, max=10, step=0.5, value=1, description='a'),
+    v0=widgets.FloatSlider(min=-20, max=20, step=1, value=5, description='v₀'),
+    x0=widgets.FloatSlider(min=-10, max=10, step=1, value=0, description='x₀'),
+    m=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1, description='m')
+);
