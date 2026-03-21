@@ -1,0 +1,91 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+# Constantes (SI)
+k = 1.0
+epsilon0 = 8.85e-12
+R = 1.0
+
+# Campo elétrico
+def E(r):
+    if r <= R:
+        return (k / (4 * epsilon0)) * r**2
+    else:
+        return (k * R**4) / (4 * epsilon0 * r**2)
+
+# ------------------------
+# PLOT 1D + 2D
+# ------------------------
+def plot_all(r_point):
+    
+    fig = plt.figure(figsize=(12,5))
+    
+    # ------------------------
+    # 1D: E(r)
+    # ------------------------
+    ax1 = fig.add_subplot(1,2,1)
+    
+    r_values = np.linspace(0.01, 3*R, 500)
+    E_values = np.array([E(r) for r in r_values])
+    
+    ax1.plot(r_values, E_values)
+    ax1.axvline(r_point, linestyle='--')
+    ax1.scatter([r_point], [E(r_point)], color='red')
+    
+    ax1.set_xlabel("r (m)")
+    ax1.set_ylabel("E(r) (N/C)")
+    ax1.set_title("E(r) vs r")
+    ax1.grid()
+    
+    # ------------------------
+    # 2D: linhas de campo
+    # ------------------------
+    ax2 = fig.add_subplot(1,2,2)
+    
+    # esfera
+    circle = plt.Circle((0,0), R, color='lightblue', alpha=0.5)
+    ax2.add_patch(circle)
+    
+    angles = np.linspace(0, 2*np.pi, 16, endpoint=False)
+    
+    for theta in angles:
+        r_vals = np.linspace(0.05, 2.5*R, 200)
+        
+        x = r_vals * np.cos(theta)
+        y = r_vals * np.sin(theta)
+        
+        # setas (direção radial)
+        dx = np.cos(theta)
+        dy = np.sin(theta)
+        
+        ax2.quiver(
+            x[::25], y[::25], dx, dy,
+            angles='xy', scale_units='xy', scale=1
+        )
+    
+    # ponto selecionado
+    x_point = r_point * np.cos(0)
+    y_point = r_point * np.sin(0)
+    
+    ax2.scatter([x_point], [y_point], color='red')
+    
+    ax2.set_xlim(-2.5*R, 2.5*R)
+    ax2.set_ylim(-2.5*R, 2.5*R)
+    ax2.set_aspect('equal')
+    
+    ax2.set_title("Electric Field Lines")
+    ax2.grid()
+    
+    plt.show()
+
+# Slider
+slider = widgets.FloatSlider(
+    value=0.5,
+    min=0.01,
+    max=2.5*R,
+    step=0.01,
+    description='r (m):'
+)
+
+widgets.interactive(plot_all, r_point=slider)
