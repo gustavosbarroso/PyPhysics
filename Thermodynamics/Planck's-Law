@@ -1,0 +1,60 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import clear_output
+import time
+
+# =========================
+# CONSTANTES (SI)
+# =========================
+h = 6.626e-34      # J·s
+c = 3e8            # m/s
+k = 1.38e-23       # J/K
+
+# =========================
+# PLANCK (frequência)
+# =========================
+def planck(nu, T):
+    return (2*h*nu**3 / c**2) / (np.exp(h*nu/(k*T)) - 1)
+
+# =========================
+# SIMULAÇÃO
+# =========================
+def simular(T_min, T_max):
+
+    nu = np.linspace(1e12, 3e15, 400)  # Hz
+    temps = np.linspace(T_min, T_max, 80)
+
+    for i in range(0, len(temps), 2):
+
+        clear_output(wait=True)
+
+        T = temps[i]
+        B = planck(nu, T)
+
+        plt.figure(figsize=(6,4))
+
+        plt.plot(nu, B)
+
+        plt.xlabel("Frequência ν (Hz)")
+        plt.ylabel("B(ν,T) (W·sr⁻¹·m⁻²·Hz⁻¹)")
+        plt.title(f"Radiação de Corpo Negro (T = {T:.0f} K)")
+
+        plt.xlim(nu[0], nu[-1])
+        plt.ylim(0, np.max(B)*1.1)
+
+        plt.grid()
+
+        plt.show()
+
+        time.sleep(0.05)
+
+
+# =========================
+# WIDGET
+# =========================
+widgets.interact(
+    simular,
+    T_min=widgets.FloatSlider(min=500, max=3000, step=100, value=1000, description="T min (K)"),
+    T_max=widgets.FloatSlider(min=2000, max=10000, step=200, value=6000, description="T max (K)")
+)
