@@ -1,0 +1,160 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+g = 9.81
+dt = 0.02
+
+# =========================
+# SIMULAÇÃO
+# =========================
+def gerar_dados(F0, mu_s, mu_k, m, tipo):
+
+    t_max = 10
+    t_vals = np.arange(0, t_max, dt)
+
+    x = 0.0
+    v = 0.0
+
+    x_list = []
+    v_list = []
+    a_list = []
+    atrito_tipo = []
+
+    for t in t_vals:
+
+        if tipo == "Constante":
+            F_aplicada = F0
+        elif tipo == "Senoidal":
+            F_aplicada = F0 * np.sin(t)
+        elif tipo == "Impulso":
+            F_aplicada = F0 if 2 < t < 2.5 else 0
+
+        if abs(v) < 1e-4:
+            F_max = mu_s * m * g
+
+            if abs(F_aplicada) < F_max:
+                F_atrito = -F_aplicada
+                tipo_atrito = "Estático"
+            else:
+                F_atrito = -np.sign(F_aplicada) * mu_k * m * g
+                tipo_atrito = "Cinético"
+        else:
+            F_atrito = -np.sign(v) * mu_k * m * g
+            tipo_atrito = "Cinético"
+
+        if abs(F_atrito) < 1e-6:
+            tipo_atrito = "Zerado"
+
+        F_total = F_aplicada + F_atrito
+
+        a = F_total / m
+        v += a * dt
+        x += v * dt
+
+        x_list.append(x)
+        v_list.append(v)
+        a_list.append(a)
+        atrito_tipo.append(tipo_atrito)
+
+    return t_vals, np.array(x_list), np.array(v_list), np.array(a_list), atrito_tipo
+
+
+# =========================
+# ANIMAÇÃO
+# =========================
+def animar_bloco(F0, mu_s, mu_k, m, tipo, frame):
+
+    t_vals, x_vals, v_vals, a_vals, atrito_tipo = gerar_dados(F0, mu_s, mu_k, m, tipo)
+
+    frame = min(frame, len(t_vals) - 1)
+
+    t = t_vals[frame]
+    x = x_vals[frame]
+    v = v_vals[frame]
+
+    tipo_atrito = atrito_tipo[frame]
+
+    # força aplicada
+    if tipo == "Constante":
+        F_aplicada = F0
+    elif tipo == "Senoidal":
+        F_aplicada = F0 * np.sin(t)
+    elif tipo == "Impulso":
+        F_aplicada = F0 if 2 < t < 2.5 else 0
+
+    # atrito
+    if abs(v) < 1e-4:
+        F_max = mu_s * m * g
+
+        if abs(F_aplicada) < F_max:
+            F_atrito = -F_aplicada
+        else:
+            F_atrito = -np.sign(F_aplicada) * mu_k * m * g
+    else:
+        F_atrito = -np.sign(v) * mu_k * m * g
+
+    scale = 0.2
+
+    fig, ax = plt.subplots(figsize=(10, 3))
+
+    # câmera dinâmica
+    window = 6
+    ax.set_xlim(x - window/2, x + window/2)
+    ax.set_ylim(-1, 1)
+
+    # bloco
+    ax.plot(x, 0, 's', markersize=20)
+
+    # forças
+    ax.arrow(x, 0.2, scale * F_aplicada, 0,
+             head_width=0.05, color='green')
+
+    ax.arrow(x, -0.2, scale * F_atrito, 0,
+             head_width=0.05, color='red')
+
+    ax.arrow(x, 0, 0.1 * v, 0,
+             head_width=0.05, color='blue')
+
+    # =========================
+    # LEGENDA DAS FORÇAS
+    # =========================
+    ax.legend(handles=[
+        plt.Line2D([0], [0], color='green', lw=2, label='Força aplicada (N)'),
+        plt.Line2D([0], [0], color='red', lw=2, label='Atrito (N)'),
+        plt.Line2D([0], [0], color='blue', lw=2, label='Velocidade(m/s)')
+    ], loc='upper left')
+
+    # =========================
+    # TEXTO DO ATRITO
+    # =========================
+    ax.text(0.02, 0.05, f"Atrito: {tipo_atrito}",
+        transform=ax.transAxes,
+        fontsize=12,
+        bbox=dict(facecolor='white', alpha=0.7))
+    ax.set_title(f"Bloco em movimento | t = {t:.2f}s")
+    ax.set_yticks([])
+    ax.set_xlabel("Posição (m)")
+    ax.grid()
+
+    plt.show()
+
+
+# =========================
+# CONTROLES
+# =========================
+widgets.interact(
+    animar_bloco,
+
+    F0=widgets.FloatSlider(value=5, min=-10, max=10, step=0.1, description="Força (N)"),
+    mu_s=widgets.FloatSlider(value=0.4, min=0, max=1, step=0.01, description="μ estático"),
+    mu_k=widgets.FloatSlider(value=0.3, min=0, max=1, step=0.01, description="μ cinético"),
+    m=widgets.FloatSlider(value=1.0, min=0.1, max=10, step=0.1, description="Massa (kg)"),
+
+    tipo=widgets.Dropdown(
+        options=["Constante", "Senoidal", "Impulso"],
+        description="Tipo"
+    ),
+
+    frame=widgets.IntSlider(min=0, max=500, step=1, value=0, description="Tempo")
+)
