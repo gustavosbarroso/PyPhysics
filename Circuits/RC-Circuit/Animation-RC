@@ -3,23 +3,21 @@ import matplotlib.pyplot as plt
 import ipywidgets as widgets
 from IPython.display import display
 
-def simular_frame(R, L, C, q0, frame):
+def simular_frame_RC(R, C, q0, frame):
 
     dt = 0.02
     t_max = 20
 
     q = q0
-    i = 0
 
     t_vals = []
     i_vals = []
 
     # ---------------------------
-    # SIMULAÇÃO RLC
+    # SIMULAÇÃO RC
     # ---------------------------
     for t in np.arange(0, t_max, dt):
-        a = -(R/L)*i - (1/(L*C))*q
-        i += a * dt
+        i = -q / (R*C)
         q += i * dt
 
         t_vals.append(t)
@@ -52,10 +50,9 @@ def simular_frame(R, L, C, q0, frame):
         else:
             return 0, height - (s - (2*width + height))
 
-    # corrente no frame
     v = i_vals[frame]
 
-    # movimento acumulado ao longo do tempo
+    # movimento acumulado (decrescente)
     deslocamento = np.sum(np.tanh(i_vals[:frame])) * dt * 2
     s = np.mod(s + deslocamento, perimeter)
 
@@ -70,7 +67,7 @@ def simular_frame(R, L, C, q0, frame):
     # ---------------------------
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
 
-    # circuito
+    # circuito RC
     ax1.plot([0,width],[0,0],'k',lw=2)
     ax1.plot([width,width],[0,height],'k',lw=2)
     ax1.plot([width,0],[height,height],'k',lw=2)
@@ -85,33 +82,29 @@ def simular_frame(R, L, C, q0, frame):
     ax1.plot([3.5,3.5],[height-0.5,height+0.5],'k',lw=3)
     ax1.plot([4,4],[height-0.5,height+0.5],'k',lw=3)
 
-    # indutor
-    theta = np.linspace(0, 2*np.pi, 100)
-    for n in range(5):
-        xL = width + 0.4*np.cos(theta)
-        yL = 0.5 + n*0.4 + 0.4*np.sin(theta)
-        ax1.plot(xL, yL, 'k')
-
     # elétrons
     color = 'blue' if v > 0 else 'red'
     ax1.scatter(xs, ys, s=40, c=color)
 
     ax1.set_xlim(-1, width+2)
     ax1.set_ylim(-1, height+2)
-    ax1.set_title("Circuito RLC")
+    ax1.set_title("Circuito RC")
     ax1.axis('off')
 
-    # gráfico
+    # gráfico corrente
     ax2.plot(t_vals, i_vals)
     ax2.axvline(t_vals[frame], linestyle='--')
 
     ax2.set_xlabel("Tempo (s)")
     ax2.set_ylabel("Corrente (A)")
-    ax2.set_title("Corrente no circuito")
+    ax2.set_title("Descarga do capacitor")
     ax2.grid()
 
+    # constante de tempo
+    tau = R*C
+
     plt.suptitle(
-        f"R = {R:.2f} Ω | L = {L:.2f} H | C = {C:.2f} F\n"
+        f"R = {R:.2f} Ω | C = {C:.2f} F | τ = {tau:.2f} s\n"
         f"t = {t_vals[frame]:.2f} s | i = {v:.3f} A"
     )
 
@@ -120,12 +113,11 @@ def simular_frame(R, L, C, q0, frame):
 
 
 # ---------------------------
-# INTERFACE (CORRIGIDA)
+# INTERFACE
 # ---------------------------
 widgets.interact(
-    simular_frame,
+    simular_frame_RC,
     R=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1, description="R (Ω)"),
-    L=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="L (H)"),
     C=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="C (F)"),
     q0=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="q₀ (C)"),
     frame=widgets.IntSlider(min=0, max=1000, step=1, value=0, description="tempo")
