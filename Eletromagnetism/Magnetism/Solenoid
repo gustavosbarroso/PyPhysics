@@ -1,0 +1,51 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+mu0 = 4*np.pi*1e-7
+
+def solenoide(I, n, L):
+
+    # eixo em metros
+    z = np.linspace(-2*L, 2*L, 400)
+
+    # extremidades do solenoide
+    z1 = -L/2
+    z2 = L/2
+
+    # raio de referência (não essencial no eixo, mas evita divisão por zero)
+    R = 0.1  # m (valor pequeno apenas para estabilidade numérica)
+
+    theta1 = np.arctan(R / (z - z1))
+    theta2 = np.arctan(R / (z - z2))
+
+    # fórmula do Griffiths
+    B = (mu0 * n * I / 2) * (np.cos(theta2) - np.cos(theta1))
+
+    # converter para μT
+    B_uT = B * 1e6
+
+    # gráfico
+    plt.figure(figsize=(6,5))
+    plt.plot(z, B_uT)
+
+    plt.axvline(z1, linestyle='--', label='Extremidades')
+    plt.axvline(z2, linestyle='--')
+
+    plt.xlabel("z (m)")  # ← unidade SI aqui
+    plt.ylabel("B (μT)")
+    plt.title("Campo de um solenoide finito (Griffiths)")
+    plt.grid()
+
+    plt.legend()
+    plt.show()
+
+
+# =========================
+# SLIDERS
+# =========================
+I_slider = widgets.FloatSlider(value=2, min=-10, max=10, step=0.1, description='I (A)')
+n_slider = widgets.FloatSlider(value=1000, min=10, max=5000, step=50, description='n (1/m)')
+L_slider = widgets.FloatSlider(value=2, min=0.5, max=10, step=0.5, description='L (m)')
+
+widgets.interact(solenoide, I=I_slider, n=n_slider, L=L_slider)
