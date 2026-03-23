@@ -3,6 +3,7 @@
 “This project was developed with the assistance of Artificial Intelligence (AI) to support the design and implementation of interactive physics simulations.”
 
 The main goal of PyPhysics is to support educators in making physics more engaging and visually accessible through interactive simulations. It is designed for both students and teachers in Brazil and worldwide, helping to make physics concepts easier to understand through visualization and interaction.
+
 🚀 Run on Google Colab
 
 This project was developed and tested using Google Colab, so no installation is required.
