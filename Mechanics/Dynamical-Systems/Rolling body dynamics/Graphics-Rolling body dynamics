@@ -1,1 +1,111 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
 
+g = 9.81
+
+# =========================
+# SIMULAÇÃO
+# =========================
+def simular(theta_deg, tipo, v0):
+
+    theta = np.radians(theta_deg)
+
+    # fator I/(mR²)
+    if tipo == "Esfera":
+        k = 2/5
+    elif tipo == "Cilindro":
+        k = 1/2
+    elif tipo == "Anel":
+        k = 1
+    else:
+        k = 0
+
+    a = g * np.sin(theta) / (1 + k)
+
+    dt = 0.02
+    t_max = 10
+    t = np.arange(0, t_max, dt)
+
+    x = 0
+    v = v0
+
+    x_vals = []
+    v_vals = []
+    E_trans = []
+    E_rot = []
+    E_pot = []
+
+    m = 1
+    R = 1
+
+    for ti in t:
+
+        # Atualização
+        v = v + a * dt
+        x = x + v * dt
+
+        # Energia
+        h = x * np.sin(theta)
+
+        E_t = 0.5 * m * v**2
+        E_r = 0.5 * k * m * v**2
+        E_p = m * g * h
+
+        x_vals.append(x)
+        v_vals.append(v)
+        E_trans.append(E_t)
+        E_rot.append(E_r)
+        E_pot.append(E_p)
+
+    return t, x_vals, v_vals, E_trans, E_rot, E_pot
+
+
+# =========================
+# PLOT
+# =========================
+def plotar(theta, tipo, v0):
+
+    t, x, v, Et, Er, Ep = simular(theta, tipo, v0)
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+
+    # posição
+    axs[0].plot(t, x)
+    axs[0].set_title("Posição vs Tempo")
+    axs[0].set_xlabel("Tempo (s)")
+    axs[0].set_ylabel("Posição (m)")
+    axs[0].grid()
+
+    # velocidade
+    axs[1].plot(t, v)
+    axs[1].set_title("Velocidade vs Tempo")
+    axs[1].set_xlabel("Tempo (s)")
+    axs[1].set_ylabel("Velocidade (m/s)")
+    axs[1].grid()
+
+    # energias
+    axs[2].plot(t, Et, label="Translacional")
+    axs[2].plot(t, Er, label="Rotacional")
+    axs[2].plot(t, Ep, label="Potencial")
+    axs[2].plot(t, np.array(Et)+np.array(Er)+np.array(Ep), linestyle='--', label="Total")
+
+    axs[2].set_title("Energias")
+    axs[2].set_xlabel("Tempo (s)")
+    axs[2].set_ylabel("Energia (J)")
+    axs[2].legend()
+    axs[2].grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =========================
+# INTERFACE
+# =========================
+widgets.interact(
+    plotar,
+    theta=widgets.FloatSlider(min=5, max=60, step=1, value=20, description="Ângulo (°)"),
+    tipo=widgets.Dropdown(options=["Esfera", "Cilindro", "Anel"], description="Sólido"),
+    v0=widgets.FloatSlider(min=-10, max=10, step=0.5, value=0, description="Vel. inicial")
+)
