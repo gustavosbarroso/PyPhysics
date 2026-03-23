@@ -21,11 +21,11 @@ def simular(I, r_destaque):
     # módulo do campo
     B_fio = mu0 * I / (2*np.pi*r)
 
-    # componentes do campo
+    # componentes
     Bx = -Y / r * B_fio
     By = X / r * B_fio
 
-    # linhas de campo (circuito fechado)
+    # linhas de campo
     ax1.streamplot(
         X, Y,
         Bx, By,
@@ -34,8 +34,10 @@ def simular(I, r_destaque):
         linewidth=1
     )
 
-    # fio
-    ax1.plot(0, 0, 'ko', markersize=8)
+    # =========================
+    # FIO EM VERMELHO 🔴
+    # =========================
+    ax1.plot(0, 0, 'o', color='red', markersize=10)
 
     ax1.set_title("Linhas de campo magnético")
     ax1.set_xlabel("x (cm)")
@@ -45,21 +47,22 @@ def simular(I, r_destaque):
     ax1.set_aspect('equal')
 
     # =========================
-    # GRÁFICO B(r)
+    # GRÁFICO B(r) EM μT
     # =========================
     r_vals = np.linspace(0.1, 5, 300)
-    B_vals = mu0 * I / (2*np.pi*r_vals)
+
+    B_vals = mu0 * I / (2*np.pi*r_vals) * 1e6
 
     ax2.plot(r_vals, B_vals)
 
     # ponto destacado
-    B_r = mu0 * I / (2*np.pi*r_destaque)
+    B_r = mu0 * I / (2*np.pi*r_destaque) * 1e6
     ax2.plot(r_destaque, B_r, 'o')
 
     ax2.axhline(0, linestyle='--')
 
     ax2.set_xlabel("r (cm)")
-    ax2.set_ylabel("B (T)")
+    ax2.set_ylabel("B (μT)")
     ax2.set_title("Campo magnético B(r)")
     ax2.grid()
 
