@@ -8,7 +8,7 @@ The main goal of PyPhysics is to support educators in making physics more engagi
 
 This project was developed and tested using Google Colab, so no installation is required.
 
-Simply open the notebook and run the cells.
+Click below to open the notebook: https://colab.research.google.com/drive/1fHPvM8TWyFQfapT32oTXLCbhNcC_9xaH?usp=sharing
 
 ⚙️ How to Run the Code
 
@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import ipywidgets as widgets
 
 plt.style.use('seaborn-v0_8-darkgrid')
+
 ▶️ Step 2 — Run one experiment at a time
 
 Each experiment is designed to work independently.
@@ -33,16 +34,19 @@ Each experiment is designed to work independently.
 Run the import cell
 Choose one experiment
 Run only the cells for that experiment
+
 ⚠️ Important
 Avoid using “Run all” if the notebook contains multiple simulations
 Running everything at once may:
 slow down execution
 overload the environment
 affect interactivity
+
 🔄 If something doesn’t work
 Restart the environment:
 Runtime → Restart runtime
 Then run only what you need
+
 🎯 Notes
 This notebook is optimized for Google Colab
 Designed for interactive use, not batch execution
