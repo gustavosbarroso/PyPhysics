@@ -1,0 +1,131 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+mu0 = 4*np.pi*1e-7
+
+def simular_fio_cilindrico(I, R, r_destaque):
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # =========================
+    # CAMPO MAGNÉTICO (LINHAS)
+    # =========================
+    x = np.linspace(-5, 5, 120)
+    y = np.linspace(-5, 5, 120)
+    X, Y = np.meshgrid(x, y)
+
+    r = np.sqrt(X**2 + Y**2)
+    r_safe = np.copy(r)
+    r_safe[r_safe == 0] = 1e-6
+
+    # campo
+    B = np.zeros_like(r)
+
+    dentro = r < R
+    fora = r >= R
+
+    B[dentro] = (mu0 * I / (2*np.pi * R**2)) * r[dentro]
+    B[fora] = (mu0 * I / (2*np.pi * r_safe[fora]))
+
+    # componentes
+    Bx = -Y / r_safe * B
+    By = X / r_safe * B
+
+    # linhas de campo
+    ax1.streamplot(
+        X, Y,
+        Bx, By,
+        density=1.4,
+        color='black'
+    )
+
+    # cilindro
+    circle_fill = plt.Circle((0, 0), R, color='red', alpha=0.2)
+    ax1.add_artist(circle_fill)
+
+    circle_edge = plt.Circle((0, 0), R, fill=False, color='red', linewidth=2)
+    ax1.add_artist(circle_edge)
+
+    ax1.plot(0, 0, 'ko')
+
+    ax1.set_title("Campo magnético (fio cilíndrico)")
+    ax1.set_xlabel("x (cm)")
+    ax1.set_ylabel("y (cm)")
+    ax1.set_xlim(-5, 5)
+    ax1.set_ylim(-5, 5)
+    ax1.set_aspect('equal')
+
+    # =========================
+    # GRÁFICO B(r) EM μT
+    # =========================
+    r_vals = np.linspace(0.01, 5, 400)
+
+    B_vals = np.zeros_like(r_vals)
+
+    dentro_vals = r_vals < R
+    fora_vals = r_vals >= R
+
+    B_vals[dentro_vals] = (mu0 * I / (2*np.pi * R**2)) * r_vals[dentro_vals]
+    B_vals[fora_vals] = (mu0 * I / (2*np.pi * r_vals[fora_vals])
+
+    )
+
+    # converter para μT
+    B_vals_uT = B_vals * 1e6
+
+    ax2.plot(r_vals, B_vals_uT)
+
+    # ponto destacado
+    if r_destaque < R:
+        B_r = (mu0 * I / (2*np.pi * R**2)) * r_destaque
+    else:
+        B_r = mu0 * I / (2*np.pi * r_destaque)
+
+    ax2.plot(r_destaque, B_r * 1e6, 'o')
+
+    # marca raio
+    ax2.axvline(R, linestyle='--', color='red')
+
+    ax2.set_xlabel("r (cm)")
+    ax2.set_ylabel("B (μT)")
+    ax2.set_title("Campo magnético B(r)")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =========================
+# SLIDERS
+# =========================
+I_slider = widgets.FloatSlider(
+    value=2.0,
+    min=-10.0,
+    max=10.0,
+    step=0.1,
+    description='I (A)'
+)
+
+R_slider = widgets.FloatSlider(
+    value=1.5,
+    min=0.5,
+    max=3.0,
+    step=0.1,
+    description='R (cm)'
+)
+
+r_slider = widgets.FloatSlider(
+    value=1.0,
+    min=0.1,
+    max=5.0,
+    step=0.1,
+    description='r (cm)'
+)
+
+widgets.interact(
+    simular_fio_cilindrico,
+    I=I_slider,
+    R=R_slider,
+    r_destaque=r_slider
+)
