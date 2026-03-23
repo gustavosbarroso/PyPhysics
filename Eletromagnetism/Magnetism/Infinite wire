@@ -1,0 +1,92 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+mu0 = 4*np.pi*1e-7
+
+def simular(I, r_destaque):
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    # =========================
+    # CAMPO MAGNÉTICO (LINHAS)
+    # =========================
+    x = np.linspace(-5, 5, 100)
+    y = np.linspace(-5, 5, 100)
+    X, Y = np.meshgrid(x, y)
+
+    r = np.sqrt(X**2 + Y**2)
+    r[r == 0] = 1e-6
+
+    # módulo do campo
+    B_fio = mu0 * I / (2*np.pi*r)
+
+    # componentes do campo
+    Bx = -Y / r * B_fio
+    By = X / r * B_fio
+
+    # linhas de campo (circuito fechado)
+    ax1.streamplot(
+        X, Y,
+        Bx, By,
+        density=1.5,
+        color='black',
+        linewidth=1
+    )
+
+    # fio
+    ax1.plot(0, 0, 'ko', markersize=8)
+
+    ax1.set_title("Linhas de campo magnético")
+    ax1.set_xlabel("x (cm)")
+    ax1.set_ylabel("y (cm)")
+    ax1.set_xlim(-5, 5)
+    ax1.set_ylim(-5, 5)
+    ax1.set_aspect('equal')
+
+    # =========================
+    # GRÁFICO B(r)
+    # =========================
+    r_vals = np.linspace(0.1, 5, 300)
+    B_vals = mu0 * I / (2*np.pi*r_vals)
+
+    ax2.plot(r_vals, B_vals)
+
+    # ponto destacado
+    B_r = mu0 * I / (2*np.pi*r_destaque)
+    ax2.plot(r_destaque, B_r, 'o')
+
+    ax2.axhline(0, linestyle='--')
+
+    ax2.set_xlabel("r (cm)")
+    ax2.set_ylabel("B (T)")
+    ax2.set_title("Campo magnético B(r)")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# =========================
+# SLIDERS
+# =========================
+I_slider = widgets.FloatSlider(
+    value=1.0,
+    min=-10.0,
+    max=10.0,
+    step=0.1,
+    description='I (A)'
+)
+
+r_slider = widgets.FloatSlider(
+    value=1.0,
+    min=0.1,
+    max=5.0,
+    step=0.1,
+    description='r (cm)'
+)
+
+# =========================
+# INTERAÇÃO
+# =========================
+widgets.interact(simular, I=I_slider, r_destaque=r_slider)
