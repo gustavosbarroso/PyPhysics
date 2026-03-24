@@ -1,0 +1,108 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import display
+
+def calcular_dados(v1i, v2i, m1, m2, e, T):
+
+    dt = 0.02
+    t = np.arange(0, T, dt)
+
+    x1, x2 = -2.0, 2.0
+
+    v1_list, v2_list = [], []
+    E_list = []
+
+    v1, v2 = v1i, v2i
+    colidiu = False
+    t_colisao = None
+
+    for ti in t:
+
+        if not colidiu and x1 >= x2:
+            colidiu = True
+            t_colisao = ti  # 🔥 guarda instante da colisão
+
+            v1f = ((m1 - e*m2)*v1 + (1+e)*m2*v2)/(m1+m2)
+            v2f = ((m2 - e*m1)*v2 + (1+e)*m1*v1)/(m1+m2)
+
+            v1, v2 = v1f, v2f
+
+        x1 += v1*dt
+        x2 += v2*dt
+
+        v1_list.append(v1)
+        v2_list.append(v2)
+        E_list.append(0.5*m1*v1**2 + 0.5*m2*v2**2)
+
+    return t, v1_list, v2_list, E_list, t_colisao
+
+
+def graficos(t, v1, v2, E, t_colisao):
+
+    plt.close('all')
+
+    fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,4))
+
+    # ===== VELOCIDADE =====
+    ax1.plot(t, v1, label="Bloco 1")
+    ax1.plot(t, v2, label="Bloco 2")
+
+    if t_colisao is not None:
+        ax1.axvline(t_colisao, linestyle='--')
+
+    ax1.set_title("Velocidade")
+    ax1.set_xlabel("Tempo (s)")
+    ax1.set_ylabel("V(m/s)")
+    ax1.legend()
+    ax1.grid()
+
+    # ===== ENERGIA =====
+    ax2.plot(t, E)
+
+    if t_colisao is not None:
+        ax2.axvline(t_colisao, linestyle='--')
+
+    ax2.set_title("Energia Cinética")
+    ax2.set_xlabel("Tempo (s)")
+    ax2.set_ylabel("T(J)")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ================= SLIDERS =================
+
+v1_slider = widgets.FloatSlider(value=2, min=-5, max=5, step=0.1, description='v1')
+v2_slider = widgets.FloatSlider(value=-1, min=-5, max=5, step=0.1, description='v2')
+m1_slider = widgets.FloatSlider(value=1, min=0.5, max=5, step=0.1, description='m1')
+m2_slider = widgets.FloatSlider(value=1, min=0.5, max=5, step=0.1, description='m2')
+e_slider = widgets.FloatSlider(value=1, min=0, max=1, step=0.05, description='e')
+T_slider = widgets.FloatSlider(value=6, min=2, max=12, step=0.5, description='Tempo')
+
+
+def atualizar_graficos(v1, v2, m1, m2, e, T):
+
+    t, v1_l, v2_l, E, t_colisao = calcular_dados(v1, v2, m1, m2, e, T)
+
+    graficos(t, v1_l, v2_l, E, t_colisao)
+
+
+out = widgets.interactive_output(
+    atualizar_graficos,
+    {'v1': v1_slider,
+     'v2': v2_slider,
+     'm1': m1_slider,
+     'm2': m2_slider,
+     'e': e_slider,
+     'T': T_slider}
+)
+
+ui = widgets.VBox([
+    v1_slider, v2_slider,
+    m1_slider, m2_slider,
+    e_slider, T_slider
+])
+
+display(ui, out)
