@@ -1,0 +1,97 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+epsilon0 = 8.85e-12
+
+def capacitor_cilindrico(lambda_nC, a, b, L):
+
+    lambda_ = lambda_nC * 1e-9
+
+    def E_r(r):
+        return lambda_ / (2 * np.pi * epsilon0 * r)
+
+    # =========================
+    # MALHA PARA LINHAS DE CAMPO
+    # =========================
+    x = np.linspace(-b*1.5, b*1.5, 300)
+    y = np.linspace(-b*1.5, b*1.5, 300)
+    X, Y = np.meshgrid(x, y)
+
+    R = np.sqrt(X**2 + Y**2)
+
+    mask = (R > a) & (R < b)
+
+    E = np.zeros_like(R)
+    E[mask] = E_r(R[mask])
+
+    Ex = np.zeros_like(R)
+    Ey = np.zeros_like(R)
+
+    Ex[mask] = E[mask] * (X[mask] / R[mask])
+    Ey[mask] = E[mask] * (Y[mask] / R[mask])
+
+    # =========================
+    # CAPACITÂNCIA E ENERGIA
+    # =========================
+    C = (2 * np.pi * epsilon0 * L) / np.log(b / a)  # F
+    C_nF = C * 1e9
+
+    V = (lambda_ / (2 * np.pi * epsilon0)) * np.log(b / a)
+
+    U = 0.5 * C * V**2
+    U_uJ = U * 1e6  # microjoules
+
+    # =========================
+    # FIGURA LADO A LADO
+    # =========================
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
+
+    # -------- GRÁFICO 1 --------
+    r = np.linspace(a, b, 200)
+    ax1.plot(r, E_r(r), color="black")
+    ax1.set_title("Campo elétrico E(r)")
+    ax1.set_xlabel("r (m)")
+    ax1.set_ylabel("E (V/m)")
+    ax1.grid()
+
+    # -------- GRÁFICO 2 --------
+    ax2.streamplot(X, Y, Ex, Ey, density=1.2)
+
+    ax2.add_patch(plt.Circle((0,0), a, fill=False, linewidth=2))
+    ax2.add_patch(plt.Circle((0,0), b, fill=False, linewidth=2))
+
+    ax2.set_title("Linhas de campo elétrico")
+    ax2.set_xlabel("x")
+    ax2.set_ylabel("y")
+    ax2.set_aspect('equal')
+    ax2.grid()
+
+    # =========================
+    # RESULTADOS
+    # =========================
+    texto = (
+        f"Capacitância: {C_nF:.4f} nF\n"
+        f"Tensão: {V:.2f} V\n"
+        f"Energia: {U_uJ:.4f} µJ"
+    )
+
+    ax2.text(
+        1.05, 0.5, texto,
+        transform=ax2.transAxes,
+        fontsize=10,
+        verticalalignment='center',
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+
+widgets.interact(
+    capacitor_cilindrico,
+    lambda_nC=widgets.FloatSlider(value=1.0, min=-10, max=10, step=0.1, description="λ (nC/m)"),
+    a=widgets.FloatSlider(value=1.0, min=0.5, max=2.0, step=0.1, description="a (m)"),
+    b=widgets.FloatSlider(value=2.0, min=1.0, max=4.0, step=0.1, description="b (m)"),
+    L=widgets.FloatSlider(value=1.0, min=0.1, max=10.0, step=0.1, description="L (m)")
+)
