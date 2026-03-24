@@ -5,73 +5,171 @@ import ipywidgets as widgets
 # Constante SI
 epsilon0 = 8.85e-12
 
-sigma0 = 1e-6  # C/m²
+def plot_capacitor(sign1, sign2, sigma_nC, A, d):
 
-def plot_field(sign):
+    # converter nC/m² → C/m²
+    sigma = sigma_nC * 1e-9
 
-    sigma = sign * sigma0
-    E = sigma / (2 * epsilon0)  # N/C
+    sigma1 = sign1 * sigma
+    sigma2 = sign2 * sigma
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+    # campos individuais
+    E1 = sigma1 / (2 * epsilon0)
+    E2 = sigma2 / (2 * epsilon0)
+
+    # campo resultante entre placas
+    E_between = E1 - E2
 
     # ========================
-    # 1D: campo constante
+    # Cálculos do capacitor
     # ========================
-    y = np.linspace(-2, 2, 200)
-    E_values = np.ones_like(y) * E
+    C = epsilon0 * A / d
+    V = E_between * d
+    U = 0.5 * C * V**2
+
+    C_nF = C * 1e9
+
+    # ========================
+    # Layout com painel lateral
+    # ========================
+    fig, (ax1, ax2, ax3) = plt.subplots(
+        1, 3, figsize=(15,5),
+        gridspec_kw={'width_ratios': [2, 2, 1]}
+    )
+
+    # ========================
+    # 1D: campo
+    # ========================
+    y = np.linspace(-3, 3, 300)
+    E_values = np.zeros_like(y)
+
+    for i, yi in enumerate(y):
+        if -d/2 < yi < d/2:
+            E_values[i] = E_between
+        else:
+            E_values[i] = 0
 
     ax1.plot(y, E_values)
+
+    ax1.axvline(-d/2, linestyle='--')
+    ax1.axvline(d/2, linestyle='--')
+
     ax1.set_xlabel("posição (m)")
     ax1.set_ylabel("E (N/C)")
-    ax1.set_title("Campo Elétrico E(r)")
+    ax1.set_title("Campo Resultante (Capacitor)")
     ax1.grid()
 
     # ========================
     # 2D: linhas de campo
     # ========================
-    ax2.set_xlim(-2, 2)
-    ax2.set_ylim(-2, 2)
+    margin = 0.5 * d
+
+    ax2.set_xlim(-d, d)
+    ax2.set_ylim(-d/2 - margin, d/2 + margin)
     ax2.set_aspect('equal')
 
-    # placa no centro
-    ax2.axhline(0, linewidth=3)
+    ax2.set_xlabel("x (m)")
+    ax2.set_ylabel("y (m)")
 
-    # posições laterais das linhas
-    x_positions = np.linspace(-1.5, 1.5, 7)
+    ax2.axhline(d/2, linewidth=3)
+    ax2.axhline(-d/2, linewidth=3)
+
+    x_positions = np.linspace(-0.8*d, 0.8*d, 7)
+
+    arrow_len = 0.2 * d
+    arrow_pos = 0.6 * (d/2)
 
     for x in x_positions:
-        if sigma > 0:
-            # SAINDO (divergente)
-            
-            # acima
-            ax2.plot([x, x], [0, 1.5], linewidth=2)
-            ax2.arrow(x, 1.2, 0, 0.2, head_width=0.08, length_includes_head=True)
+        if abs(E_between) > 0:
 
-            # abaixo
-            ax2.plot([x, x], [0, -1.5], linewidth=2)
-            ax2.arrow(x, -1.2, 0, -0.2, head_width=0.08, length_includes_head=True)
+            ax2.plot([x, x], [-d/2, d/2], linewidth=2)
 
-        else:
-            # ENTRANDO (convergente)
+            if E_between > 0:
+                ax2.arrow(x, arrow_pos, 0, arrow_len,
+                          head_width=0.05*d, length_includes_head=True)
+                ax2.arrow(x, -arrow_pos, 0, -arrow_len,
+                          head_width=0.05*d, length_includes_head=True)
+            else:
+                ax2.arrow(x, arrow_pos, 0, -arrow_len,
+                          head_width=0.05*d, length_includes_head=True)
+                ax2.arrow(x, -arrow_pos, 0, arrow_len,
+                          head_width=0.05*d, length_includes_head=True)
 
-            # acima
-            ax2.plot([x, x], [1.5, 0], linewidth=2)
-            ax2.arrow(x, 1.2, 0, -0.2, head_width=0.08, length_includes_head=True)
-
-            # abaixo
-            ax2.plot([x, x], [-1.5, 0], linewidth=2)
-            ax2.arrow(x, -1.2, 0, 0.2, head_width=0.08, length_includes_head=True)
-
-    ax2.set_title("Field Lines (Convergence/Divergence)")
+    ax2.set_title("Field Lines (Superposition)")
     ax2.grid()
 
+    # ========================
+    # Painel lateral (RESULTADOS)
+    # ========================
+    ax3.axis('off')  # remove eixos
+
+    text = (
+        "Resultados:\n\n"
+        f"σ = {sigma_nC:.2f} nC/m²\n\n"
+        f"E = {E_between:.2e} N/C\n\n"
+        f"C = {C_nF:.2f} nF\n\n"
+        f"V = {V:.2e} V\n\n"
+        f"U = {U:.2e} J"
+    )
+
+    ax3.text(0.05, 0.95, text,
+             fontsize=11,
+             verticalalignment='top',
+             bbox=dict(boxstyle="round"))
+
+    plt.tight_layout()
     plt.show()
 
 
-# Widget
-sign_toggle = widgets.ToggleButtons(
+# ========================
+# Widgets
+# ========================
+
+sign1 = widgets.ToggleButtons(
     options=[('+', 1), ('-', -1)],
-    description='Placa:'
+    description='Placa 1:'
 )
 
-widgets.interactive(plot_field, sign=sign_toggle)
+sign2 = widgets.ToggleButtons(
+    options=[('+', 1), ('-', -1)],
+    description='Placa 2:'
+)
+
+sigma_slider = widgets.FloatSlider(
+    value=1.0,
+    min=0.1,
+    max=10.0,
+    step=0.1,
+    description='σ (nC/m²):',
+    style={'description_width': 'initial'},
+    layout=widgets.Layout(width='400px')
+)
+
+area_slider = widgets.FloatSlider(
+    value=1.0,
+    min=0.1,
+    max=10.0,
+    step=0.1,
+    description='Área (m²):',
+    style={'description_width': 'initial'},
+    layout=widgets.Layout(width='400px')
+)
+
+distance_slider = widgets.FloatSlider(
+    value=1.0,
+    min=0.1,
+    max=5.0,
+    step=0.1,
+    description='Distância (m):',
+    style={'description_width': 'initial'},
+    layout=widgets.Layout(width='400px')
+)
+
+widgets.interactive(
+    plot_capacitor,
+    sign1=sign1,
+    sign2=sign2,
+    sigma_nC=sigma_slider,
+    A=area_slider,
+    d=distance_slider
+)
