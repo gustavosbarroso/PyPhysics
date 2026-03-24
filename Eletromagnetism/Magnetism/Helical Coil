@@ -1,0 +1,73 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+
+mu0 = 4*np.pi*1e-7
+
+def solenoide_real(I, n, R, L):
+
+    # =========================
+    # 📊 Campo no eixo (mantido)
+    # =========================
+    z = np.linspace(-3*L, 3*L, 400)
+
+    # Aproximação de solenoide finito (mais realista)
+    B = (mu0 * n * I / 2) * (
+        (z + L) / np.sqrt(R**2 + (z + L)**2) -
+        (z - L) / np.sqrt(R**2 + (z - L)**2)
+    )
+
+    B_uT = B * 1e6
+
+    # =========================
+    # 🧲 FIGURA
+    # =========================
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14,5))
+
+    # -------- GRÁFICO 1 --------
+    ax1.plot(z, B_uT, color="black")
+    ax1.set_title("Campo no eixo da bobina")
+    ax1.set_xlabel("z (m)")
+    ax1.set_ylabel("B (µT)")
+    ax1.grid()
+
+    # -------- GRÁFICO 2 --------
+    # malha 2D (z, r)
+    z2 = np.linspace(-3*L, 3*L, 200)
+    r = np.linspace(-2*R, 2*R, 200)
+    Z, Rr = np.meshgrid(z2, r)
+
+    # Campo aproximado:
+    # dentro → quase constante
+    # fora → decai
+
+    Bz = (mu0 * n * I) * (1 / (1 + (Rr/R)**2)) * (
+        (Z + L) / np.sqrt(R**2 + (Z + L)**2) -
+        (Z - L) / np.sqrt(R**2 + (Z - L)**2)
+    )
+
+    Br = -0.5 * (Rr/R) * Bz  # componente radial (aprox. qualitativa)
+
+    # Linhas de campo reais (streamlines)
+    ax2.streamplot(Z, Rr, Bz, Br, density=1.2, linewidth=1)
+
+    # desenhar o solenoide
+    ax2.plot([-L, L, L, -L, -L], [-R, -R, R, R, -R], color='black')
+
+    ax2.set_title("Linhas de campo (plano z × r)")
+    ax2.set_xlabel("z (m)")
+    ax2.set_ylabel("r (m)")
+
+    ax2.set_aspect('equal')
+
+    plt.tight_layout()
+    plt.show()
+
+
+widgets.interact(
+    solenoide_real,
+    I=widgets.FloatSlider(value=1, min=-5, max=5, step=0.1, description="I (A)"),
+    n=widgets.FloatSlider(value=10, min=1, max=100, step=1, description="n (espiras/m)"),
+    R=widgets.FloatSlider(value=1.0, min=0.5, max=2.0, step=0.1, description="R (m)"),
+    L=widgets.FloatSlider(value=2.0, min=0.5, max=5.0, step=0.1, description="L (m)"),
+)
