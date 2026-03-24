@@ -34,7 +34,7 @@ def solenoide(I, n, L):
 
     plt.xlabel("z (m)")  # ← unidade SI aqui
     plt.ylabel("B (μT)")
-    plt.title("Campo de um solenoide finito (Griffiths)")
+    plt.title("Campo de um solenoide finito")
     plt.grid()
 
     plt.legend()
