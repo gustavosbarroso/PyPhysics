@@ -6,46 +6,112 @@ mu0 = 4*np.pi*1e-7
 
 def solenoide(I, n, L):
 
-    # eixo em metros
+    # =========================
+    # 1D: Campo no eixo
+    # =========================
     z = np.linspace(-2*L, 2*L, 400)
 
-    # extremidades do solenoide
     z1 = -L/2
     z2 = L/2
 
-    # raio de referência (não essencial no eixo, mas evita divisão por zero)
-    R = 0.1  # m (valor pequeno apenas para estabilidade numérica)
+    R = 0.1
 
     theta1 = np.arctan(R / (z - z1))
     theta2 = np.arctan(R / (z - z2))
 
-    # fórmula do Griffiths
     B = (mu0 * n * I / 2) * (np.cos(theta2) - np.cos(theta1))
-
-    # converter para μT
     B_uT = B * 1e6
 
-    # gráfico
-    plt.figure(figsize=(6,5))
-    plt.plot(z, B_uT)
+    # =========================
+    # Layout com 2 gráficos
+    # =========================
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
 
-    plt.axvline(z1, linestyle='--', label='Extremidades')
-    plt.axvline(z2, linestyle='--')
+    # ---- gráfico 1D
+    ax1.plot(z, B_uT)
+    ax1.axvline(z1, linestyle='--', label='Extremidades')
+    ax1.axvline(z2, linestyle='--')
 
-    plt.xlabel("z (m)")  # ← unidade SI aqui
-    plt.ylabel("B (μT)")
-    plt.title("Campo de um solenoide finito")
-    plt.grid()
+    ax1.set_xlabel("z (m)")
+    ax1.set_ylabel("B (μT)")
+    ax1.set_title("Campo de um solenoide finito")
+    ax1.grid()
+    ax1.legend()
 
-    plt.legend()
+    # =========================
+    # 2D: Linhas de campo (SUAVIZADO)
+    # =========================
+
+    x = np.linspace(-L, L, 100)
+    z_grid = np.linspace(-2*L, 2*L, 200)
+    X, Z = np.meshgrid(x, z_grid)
+
+    Bz = np.zeros_like(X)
+    Bx = np.zeros_like(X)
+
+    B0 = mu0 * n * I
+
+    for i in range(len(z_grid)):
+        for j in range(len(x)):
+
+            z_val = Z[i, j]
+            x_val = X[i, j]
+
+            # campo externo (mais estável)
+            r2 = x_val**2 + z_val**2 + (0.2*L)**2
+            Bz_out = -B0 * z_val / r2
+            Bx_out =  B0 * x_val / r2
+
+            # campo interno ideal
+            Bz_in = B0
+            Bx_in = 0
+
+            # 🔥 função suave (remove descontinuidade)
+            f = np.exp(-((abs(z_val)/(L/2))**6 + (abs(x_val)/(0.3*L))**6))
+
+            # interpolação
+            Bz[i, j] = f * Bz_in + (1 - f) * Bz_out
+            Bx[i, j] = (1 - f) * Bx_out
+
+    # normalização (mantida, agora funciona bem)
+    magnitude = np.sqrt(Bx**2 + Bz**2)
+    Bx /= (magnitude + 1e-12)
+    Bz /= (magnitude + 1e-12)
+
+    ax2.streamplot(X, Z, Bx, Bz, density=1.2)
+
+    ax2.axhline(L/2, linestyle='--')
+    ax2.axhline(-L/2, linestyle='--')
+
+    ax2.set_xlabel("x (m)")
+    ax2.set_ylabel("z (m)")
+    ax2.set_title("Linhas de campo")
+    ax2.set_aspect('equal')
+    ax2.grid()
+
+    plt.tight_layout()
     plt.show()
 
 
 # =========================
 # SLIDERS
 # =========================
-I_slider = widgets.FloatSlider(value=2, min=-10, max=10, step=0.1, description='I (A)')
-n_slider = widgets.FloatSlider(value=1000, min=10, max=5000, step=50, description='n (1/m)')
-L_slider = widgets.FloatSlider(value=2, min=0.5, max=10, step=0.5, description='L (m)')
+I_slider = widgets.FloatSlider(
+    value=2, min=-10, max=10, step=0.1,
+    description='I (A)',
+    style={'description_width': 'initial'}
+)
+
+n_slider = widgets.FloatSlider(
+    value=1000, min=10, max=5000, step=50,
+    description='n (1/m)',
+    style={'description_width': 'initial'}
+)
+
+L_slider = widgets.FloatSlider(
+    value=2, min=0.5, max=10, step=0.5,
+    description='L (m)',
+    style={'description_width': 'initial'}
+)
 
 widgets.interact(solenoide, I=I_slider, n=n_slider, L=L_slider)
