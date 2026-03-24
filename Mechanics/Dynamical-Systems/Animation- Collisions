@@ -1,0 +1,101 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import display
+
+def calcular_dados(v1i, v2i, m1, m2, e, T):
+
+    dt = 0.02
+    t = np.arange(0, T, dt)
+
+    x1, x2 = -2.0, 2.0
+
+    x1_list, x2_list = [], []
+
+    v1, v2 = v1i, v2i
+    colidiu = False
+
+    for ti in t:
+
+        if not colidiu and x1 >= x2:
+            colidiu = True
+
+            v1f = ((m1 - e*m2)*v1 + (1+e)*m2*v2)/(m1+m2)
+            v2f = ((m2 - e*m1)*v2 + (1+e)*m1*v1)/(m1+m2)
+
+            v1, v2 = v1f, v2f
+
+        x1 += v1*dt
+        x2 += v2*dt
+
+        x1_list.append(x1)
+        x2_list.append(x2)
+
+    return t, x1_list, x2_list
+
+
+def atualizar(t_atual, v1, v2, m1, m2, e, T):
+
+    dt = 0.02
+
+    t, x1, x2 = calcular_dados(v1, v2, m1, m2, e, T)
+
+    frame = int(t_atual / dt)
+    frame = min(frame, len(t)-1)
+
+    plt.close('all')
+
+    fig, ax = plt.subplots(figsize=(8,3))
+
+    ax.set_xlim(-6,6)
+    ax.set_ylim(-1,1)
+    ax.set_xlabel("Posição (m)")
+    ax.set_title("Colisão")
+
+    ax.plot(x1[frame], 0, 'rs', markersize=15)
+    ax.plot(x2[frame], 0, 'bs', markersize=15)
+
+    plt.show()
+
+
+# ===== SLIDERS =====
+
+v1_slider = widgets.FloatSlider(value=2, min=-5, max=5, step=0.1, description='v1')
+v2_slider = widgets.FloatSlider(value=-1, min=-5, max=5, step=0.1, description='v2')
+m1_slider = widgets.FloatSlider(value=1, min=0.5, max=5, step=0.1, description='m1')
+m2_slider = widgets.FloatSlider(value=1, min=0.5, max=5, step=0.1, description='m2')
+e_slider = widgets.FloatSlider(value=1, min=0, max=1, step=0.05, description='e')
+T_slider = widgets.FloatSlider(value=6, min=2, max=12, step=0.5, description='Duração')
+
+# 🔥 ÚNICO controle de tempo real
+tempo_slider = widgets.FloatSlider(
+    value=0, min=0, max=6, step=0.02, description='Instante'
+)
+
+def atualizar_interface(v1, v2, m1, m2, e, T, tempo):
+
+    # mantém o tempo dentro do intervalo
+    tempo = min(tempo, T)
+
+    atualizar(tempo, v1, v2, m1, m2, e, T)
+
+
+out = widgets.interactive_output(
+    atualizar_interface,
+    {'v1': v1_slider,
+     'v2': v2_slider,
+     'm1': m1_slider,
+     'm2': m2_slider,
+     'e': e_slider,
+     'T': T_slider,
+     'tempo': tempo_slider}
+)
+
+ui = widgets.VBox([
+    v1_slider, v2_slider,
+    m1_slider, m2_slider,
+    e_slider, T_slider,
+    tempo_slider
+])
+
+display(ui, out)
