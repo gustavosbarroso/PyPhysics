@@ -1,0 +1,168 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from scipy.integrate import solve_ivp
+from IPython.display import clear_output
+import time
+
+# ---------------------------
+# CONSTANTES
+# ---------------------------
+G = 4 * np.pi**2              # UA^3 / (M☉ * ano^2)
+UA_POR_ANO = 0.2108           # conversão de km/s → UA/ano
+
+
+# ---------------------------
+# EDO
+# ---------------------------
+def tres_corpos(t, y, m1, m2, m3):
+
+    x1, y1, vx1, vy1, \
+    x2, y2, vx2, vy2, \
+    x3, y3, vx3, vy3 = y
+
+    def dist(xi, yi, xj, yj):
+        return np.sqrt((xj - xi)**2 + (yj - yi)**2) + 1e-5
+
+    r12 = dist(x1, y1, x2, y2)
+    r13 = dist(x1, y1, x3, y3)
+    r23 = dist(x2, y2, x3, y3)
+
+    ax1 = G*m2*(x2 - x1)/r12**3 + G*m3*(x3 - x1)/r13**3
+    ay1 = G*m2*(y2 - y1)/r12**3 + G*m3*(y3 - y1)/r13**3
+
+    ax2 = G*m1*(x1 - x2)/r12**3 + G*m3*(x3 - x2)/r23**3
+    ay2 = G*m1*(y1 - y2)/r12**3 + G*m3*(y3 - y2)/r23**3
+
+    ax3 = G*m1*(x1 - x3)/r13**3 + G*m2*(x2 - x3)/r23**3
+    ay3 = G*m1*(y1 - y3)/r13**3 + G*m2*(y2 - y3)/r23**3
+
+    return [
+        vx1, vy1, ax1, ay1,
+        vx2, vy2, ax2, ay2,
+        vx3, vy3, ax3, ay3
+    ]
+
+
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def simular(
+    x1, y1, vx1, vy1,
+    x2, y2, vx2, vy2,
+    x3, y3, vx3, vy3,
+    m1, m2, m3,
+    t_max
+):
+
+    # ---------------------------
+    # Conversão km/s → UA/ano
+    # ---------------------------
+    vx1 *= UA_POR_ANO
+    vy1 *= UA_POR_ANO
+    vx2 *= UA_POR_ANO
+    vy2 *= UA_POR_ANO
+    vx3 *= UA_POR_ANO
+    vy3 *= UA_POR_ANO
+
+    y0 = [
+        x1, y1, vx1, vy1,
+        x2, y2, vx2, vy2,
+        x3, y3, vx3, vy3
+    ]
+
+    t_span = (0, t_max)
+    t_eval = np.linspace(0, t_max, 800)
+
+    sol = solve_ivp(
+        tres_corpos,
+        t_span,
+        y0,
+        t_eval=t_eval,
+        args=(m1, m2, m3),
+        method='RK45'
+    )
+
+    x1, y1 = sol.y[0], sol.y[1]
+    x2, y2 = sol.y[4], sol.y[5]
+    x3, y3 = sol.y[8], sol.y[9]
+
+    limite = 3  # UA
+
+    for i in range(0, len(t_eval), 5):
+        clear_output(wait=True)
+
+        fig, (ax1_plot, ax2_plot) = plt.subplots(1, 2, figsize=(10,5))
+
+        # ---------------------------
+        # SISTEMA
+        # ---------------------------
+        ax1_plot.plot(x1[i], y1[i], 'ro', label="m1")
+        ax1_plot.plot(x2[i], y2[i], 'bo', label="m2")
+        ax1_plot.plot(x3[i], y3[i], 'go', label="m3")
+
+        ax1_plot.set_xlim(-limite, limite)
+        ax1_plot.set_ylim(-limite, limite)
+
+        ax1_plot.set_title(f"3 Corpos (t = {t_eval[i]:.2f} anos)")
+        ax1_plot.set_xlabel("x (UA)")
+        ax1_plot.set_ylabel("y (UA)")
+        ax1_plot.set_aspect('equal')
+        ax1_plot.grid(alpha=0.3)
+        ax1_plot.legend()
+
+        # ---------------------------
+        # TRAJETÓRIAS
+        # ---------------------------
+        ax2_plot.plot(x1[:i], y1[:i], 'r-', alpha=0.7, label="m1")
+        ax2_plot.plot(x2[:i], y2[:i], 'b-', alpha=0.7, label="m2")
+        ax2_plot.plot(x3[:i], y3[:i], 'g-', alpha=0.7, label="m3")
+
+        ax2_plot.set_xlim(-limite, limite)
+        ax2_plot.set_ylim(-limite, limite)
+
+        ax2_plot.set_title("Trajetórias")
+        ax2_plot.set_xlabel("x (UA)")
+        ax2_plot.set_ylabel("y (UA)")
+        ax2_plot.set_aspect('equal')
+        ax2_plot.grid(alpha=0.3)
+        ax2_plot.legend()
+
+        plt.tight_layout()
+        plt.show()
+
+        time.sleep(0.03)
+
+
+# ---------------------------
+# WIDGETS
+# ---------------------------
+widgets.interact(
+    simular,
+
+    # Corpo 1
+    x1=widgets.FloatSlider(min=-2, max=2, step=0.1, value=-1, description="x1 (UA)"),
+    y1=widgets.FloatSlider(min=-2, max=2, step=0.1, value=0, description="y1 (UA)"),
+    vx1=widgets.FloatSlider(min=-50, max=50, step=1, value=0, description="vx1 (km/s)"),
+    vy1=widgets.FloatSlider(min=-50, max=50, step=1, value=30, description="vy1 (km/s)"),
+
+    # Corpo 2
+    x2=widgets.FloatSlider(min=-2, max=2, step=0.1, value=1, description="x2 (UA)"),
+    y2=widgets.FloatSlider(min=-2, max=2, step=0.1, value=0, description="y2 (UA)"),
+    vx2=widgets.FloatSlider(min=-50, max=50, step=1, value=0, description="vx2 (km/s)"),
+    vy2=widgets.FloatSlider(min=-50, max=50, step=1, value=-30, description="vy2 (km/s)"),
+
+    # Corpo 3
+    x3=widgets.FloatSlider(min=-2, max=2, step=0.1, value=0, description="x3 (UA)"),
+    y3=widgets.FloatSlider(min=-2, max=2, step=0.1, value=1, description="y3 (UA)"),
+    vx3=widgets.FloatSlider(min=-50, max=50, step=1, value=30, description="vx3 (km/s)"),
+    vy3=widgets.FloatSlider(min=-50, max=50, step=1, value=0, description="vy3 (km/s)"),
+
+    # Massas
+    m1=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="m1 (M☉)"),
+    m2=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="m2 (M☉)"),
+    m3=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="m3 (M☉)"),
+
+    # Tempo
+    t_max=widgets.FloatSlider(min=1, max=20, step=1, value=5, description="Tempo (anos)")
+);
