@@ -1,0 +1,170 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from scipy.integrate import solve_ivp
+from IPython.display import clear_output
+import time
+
+G = 4 * np.pi**2
+UA_POR_ANO = 0.2108
+
+
+def dois_corpos(t, y, m1, m2):
+
+    x1, y1, vx1, vy1, \
+    x2, y2, vx2, vy2 = y
+
+    dx = x2 - x1
+    dy = y2 - y1
+
+    r = np.sqrt(dx**2 + dy**2) + 1e-5
+
+    ax1 = G*m2*dx/r**3
+    ay1 = G*m2*dy/r**3
+
+    ax2 = -G*m1*dx/r**3
+    ay2 = -G*m1*dy/r**3
+
+    return [
+        vx1, vy1, ax1, ay1,
+        vx2, vy2, ax2, ay2
+    ]
+
+
+def simular(r, v_rel, m1, m2, t_max):
+
+    M = m1 + m2
+
+    x1 = - (m2/M) * r
+    y1 = 0
+    x2 =   (m1/M) * r
+    y2 = 0
+
+    v = v_rel * UA_POR_ANO
+    v_esc = np.sqrt(2*G*M/r)
+    f = v / v_esc
+
+    if abs(f - 1) < 0.02:
+        tipo = "Parabólica"
+    elif f < 1:
+        tipo = "Elíptica"
+    else:
+        tipo = "Hiperbólica"
+
+    vx1 = 0
+    vy1 =  v * (m2/M)
+    vx2 = 0
+    vy2 = -v * (m1/M)
+
+    vx_cm = (m1*vx1 + m2*vx2)/M
+    vy_cm = (m1*vy1 + m2*vy2)/M
+
+    vx1 -= vx_cm
+    vy1 -= vy_cm
+    vx2 -= vx_cm
+    vy2 -= vy_cm
+
+    y0 = [
+        x1, y1, vx1, vy1,
+        x2, y2, vx2, vy2
+    ]
+
+    t_span = (0, t_max)
+    t_eval = np.linspace(0, t_max, 800)
+
+    sol = solve_ivp(
+        dois_corpos,
+        t_span,
+        y0,
+        t_eval=t_eval,
+        args=(m1, m2)
+    )
+
+    x1, y1 = sol.y[0], sol.y[1]
+    x2, y2 = sol.y[4], sol.y[5]
+
+    limite = max(3, 2*r)
+
+    info = (
+        f"Parâmetros iniciais\n"
+        f"----------------------\n"
+        f"r = {r:.2f} UA\n"
+        f"v_rel = {v_rel:.1f} km/s\n"
+        f"v_esc = {(v_esc/UA_POR_ANO):.1f} km/s\n"
+        f"f = {f:.2f}\n\n"
+        f"m1 = {m1:.2f} M☉\n"
+        f"m2 = {m2:.2f} M☉\n\n"
+        f"Órbita: {tipo}"
+    )
+
+    for i in range(0, len(t_eval), 5):
+        clear_output(wait=True)
+
+        fig = plt.figure(figsize=(12,5))
+
+        # SISTEMA
+        ax1 = fig.add_subplot(1,3,1)
+
+        ax1.plot(0, 0, 'k+', markersize=10, label="Centro de massa")
+        ax1.plot(x1[i], y1[i], 'ro', label="m1")
+        ax1.plot(x2[i], y2[i], 'bo', label="m2")
+
+        ax1.set_xlabel("x (UA)")
+        ax1.set_ylabel("y (UA)")
+
+        ax1.set_xlim(-limite, limite)
+        ax1.set_ylim(-limite, limite)
+        ax1.set_aspect('equal')
+        ax1.set_title(f"t = {t_eval[i]:.2f} anos")
+        ax1.grid(alpha=0.3)
+        ax1.legend(loc="upper right")
+
+        # PAINEL
+        ax_mid = fig.add_subplot(1,3,2)
+        ax_mid.axis('off')
+
+        ax_mid.text(
+            0.5, 0.5, info,
+            ha='center', va='center',
+            fontsize=11,
+            bbox=dict(boxstyle="round", alpha=0.2)
+        )
+
+        # TRAJETÓRIAS
+        ax2 = fig.add_subplot(1,3,3)
+
+        ax2.plot(x1[:i], y1[:i], 'r-', label="m1")
+        ax2.plot(x2[:i], y2[:i], 'b-', label="m2")
+        ax2.plot(0, 0, 'k+', markersize=10, label="CM")
+
+        ax2.set_xlabel("x (UA)")
+        ax2.set_ylabel("y (UA)")
+
+        ax2.set_xlim(-limite, limite)
+        ax2.set_ylim(-limite, limite)
+        ax2.set_aspect('equal')
+        ax2.set_title("Órbitas")
+        ax2.grid(alpha=0.3)
+        ax2.legend(loc="upper right")
+
+        plt.tight_layout()
+        plt.show()
+
+        time.sleep(0.03)
+
+
+widgets.interact(
+    simular,
+
+    r=widgets.FloatSlider(min=0.5, max=5, step=0.1, value=2, description="r (UA)"),
+
+    v_rel=widgets.FloatSlider(
+        min=0, max=50, step=1, value=20,
+        description="v_rel (km/s)"
+    ),
+
+    m1=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="m1 (M☉)"),
+    m2=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="m2 (M☉)"),
+
+    t_max=widgets.FloatSlider(min=1, max=20, step=1, value=5, description="Tempo (anos)")
+);
