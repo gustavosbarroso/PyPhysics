@@ -5,7 +5,7 @@ from IPython.display import clear_output
 import time
 
 # ---------------------------
-# RK4 (igual ao seu)
+# RK4 
 # ---------------------------
 def RK4(f, a, b, N, r):
 
