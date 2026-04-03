@@ -1,46 +1,71 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
-from IPython.display import display
 
-def simular_rlc(R, L, C, q0, slide, mostrar_resposta):
+# ---------------------------
+# RK4 
+# ---------------------------
+def RK4(f, a, b, N, r):
 
-    dt = 0.01
-    t_max = 20
+    h = (b - a) / N
+    tpontos = np.linspace(a, b, N+1)
+    r = np.array(r, float)
 
-    q = q0
-    i = 0
+    qpontos = [r[0]]
+    ipontos = [r[1]]
 
-    t_vals = []
-    q_vals = []
-    i_vals = []
-    vc_vals = []
-    vr_vals = []
-    vl_vals = []
-    E_vals = []
+    for i in range(N):
+        t = tpontos[i]
 
-    for t in np.arange(0, t_max, dt):
+        k1 = h * f(r, t)
+        k2 = h * f(r + 0.5*k1, t + 0.5*h)
+        k3 = h * f(r + 0.5*k2, t + 0.5*h)
+        k4 = h * f(r + k3, t + h)
 
-        a = -(R/L)*i - (1/(L*C))*q
+        r = r + (k1 + 2*k2 + 2*k3 + k4) / 6
 
-        i += a * dt
-        q += i * dt
+        qpontos.append(r[0])
+        ipontos.append(r[1])
 
-        vc = q / C
-        vr = R * i
-        vl = L * a
+    return tpontos, np.array(qpontos), np.array(ipontos)
 
-        E = (q**2)/(2*C) + 0.5*L*i**2
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def simular_rlc(R, L, C, q0):
 
-        t_vals.append(t)
-        q_vals.append(q)
-        i_vals.append(i)
-        vc_vals.append(vc)
-        vr_vals.append(vr)
-        vl_vals.append(vl)
-        E_vals.append(E)
+    # sistema dinâmico
+    def f(r, t):
+        q = r[0]
+        i = r[1]
 
-    # -------- regime --------
+        fq = i
+        fi = -(R/L)*i - (1/(L*C))*q
+
+        return np.array([fq, fi], float)
+
+    # condição inicial
+    r0 = [q0, 0]
+
+    # integração
+    t_vals, q_vals, i_vals = RK4(f, 0, 20, 2000, r0)
+
+    # ---------------------------
+    # grandezas derivadas
+    # ---------------------------
+    vc_vals = q_vals / C
+    vr_vals = R * i_vals
+
+    # derivada numérica de i (para Vl)
+    di_dt = np.gradient(i_vals, t_vals)
+    vl_vals = L * di_dt
+
+    # energia
+    E_vals = (q_vals**2)/(2*C) + 0.5*L*i_vals**2
+
+    # ---------------------------
+    # regime
+    # ---------------------------
     gamma = R/(2*L)
     omega0 = np.sqrt(1/(L*C))
 
@@ -51,19 +76,23 @@ def simular_rlc(R, L, C, q0, slide, mostrar_resposta):
     else:
         regime = "Superamortecido (não oscila)"
 
-    # -------- PLOTS (LAYOUT NOVO) --------
+    # ---------------------------
+    # PLOTS
+    # ---------------------------
     fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(18,4))
 
-    # carga
+    # q(t)
     ax1.plot(t_vals, q_vals)
-    ax1.set_title("q(t)")
-    ax1.set_xlabel("t")
+    ax1.set_title("Carga")
+    ax1.set_ylabel("Q (C)")
+    ax1.set_xlabel("t (s)")
     ax1.grid()
 
-    # corrente
+    # i(t)
     ax2.plot(t_vals, i_vals)
-    ax2.set_title("i(t)")
-    ax2.set_xlabel("t")
+    ax2.set_title("Corrente")
+    ax2.set_ylabel("i (A)")
+    ax2.set_xlabel("t (s)")
     ax2.grid()
 
     # tensões
@@ -72,92 +101,28 @@ def simular_rlc(R, L, C, q0, slide, mostrar_resposta):
     ax3.plot(t_vals, vl_vals, label="Vl")
     ax3.set_title("Tensões")
     ax3.legend()
-    ax3.set_xlabel("t")
+    ax3.set_ylabel("V (volt)")
+    ax3.set_xlabel("t (s)")
     ax3.grid()
 
     # energia
     ax4.plot(t_vals, E_vals)
     ax4.set_title("Energia")
-    ax4.set_xlabel("t")
+    ax4.set_ylabel("E (J)")
+    ax4.set_xlabel("t (s)")
     ax4.grid()
 
     plt.suptitle(f"Circuito RLC | {regime}")
     plt.tight_layout()
     plt.show()
 
-    print("\n" + "="*50)
-
-    # =====================================================
-    # PERGUNTAS (inalteradas)
-    # =====================================================
-
-    if slide == "Explorar":
-        print("👀 Perguntas:")
-        print("- Corrente e carga estão em fase?")
-        print("- O que acontece com as tensões ao longo do tempo?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Não. A corrente depende da derivada da carga.")
-            print("- Todas decaem devido à dissipação no resistor.")
-
-    elif slide == "Corrente vs carga":
-        print("⚡ Perguntas:")
-        print("- Quando a corrente é máxima?")
-        print("- Quando a carga é máxima?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Corrente máxima quando a carga cruza zero.")
-            print("- Carga máxima nos extremos.")
-
-    elif slide == "Tensões":
-        print("🔌 Perguntas:")
-        print("- As tensões somam zero?")
-        print("- Qual elemento domina em diferentes momentos?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Sim: V_L + V_R + V_C = 0.")
-            print("- Depende do instante.")
-
-    elif slide == "Energia":
-        print("🔥 Perguntas:")
-        print("- A energia total se conserva?")
-        print("- Por que ela diminui?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Não, devido ao resistor.")
-            print("- Dissipação em calor.")
-
-    elif slide == "Regimes":
-        print("⚖️ Perguntas:")
-        print("- Como o comportamento muda com R?")
-        print("- Quando há oscilação?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Maior R → menos oscilação.")
-            print("- Só no subamortecido.")
-
 # ---------------------------
-# INTERFACE
+# INTERFACE LIMPA
 # ---------------------------
 widgets.interact(
     simular_rlc,
-    R=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1),
-    L=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1),
-    C=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1),
-    q0=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1),
-    slide=widgets.Dropdown(
-        options=[
-            "Explorar",
-            "Corrente vs carga",
-            "Tensões",
-            "Energia",
-            "Regimes"
-        ]
-    ),
-    mostrar_resposta=widgets.Checkbox(value=False)
-);
+    R=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1, description="R (Ω)"),
+    L=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="L (H)"),
+    C=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="C (F)"),
+    q0=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="q₀ (C)")
+)
