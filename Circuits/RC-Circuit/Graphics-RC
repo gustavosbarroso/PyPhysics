@@ -1,11 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
-from IPython.display import clear_output
-import time
-
-# controle de reset
-sim_id = 0
 
 # ---------------------------
 # RK4 ESCALAR
@@ -33,133 +28,66 @@ def RK4(f, a, b, N, x0):
 
 
 # ---------------------------
-# SIMULAÇÃO RC COM RK4
+# SIMULAÇÃO RC 
 # ---------------------------
-def simular(R, C, q0):
+def simular_RC(R, C_micro, V0, t_max=5, N=2000, modo="Carga"):
 
-    global sim_id
-    sim_id += 1
-    meu_id = sim_id
+    C = C_micro * 1e-6  # µF → F
 
-    # equação RC
-    def f(q, t):
-        return -q / (R*C)
+    # equação diferencial
+    if modo == "Carga":
+        def f(Vc, t):
+            return (V0 - Vc) / (R*C)
+        Vc0 = 0
+    else:
+        def f(Vc, t):
+            return -Vc / (R*C)
+        Vc0 = V0
 
-    # integração
-    t_vals, q_vals = RK4(f, 0, 20, 1000, q0)
+    # integração RK4
+    t_vals, Vc_vals = RK4(f, 0, t_max, N, Vc0)
 
-    # corrente a partir da derivada
-    i_vals = -q_vals / (R*C)
+    # corrente
+    if modo == "Carga":
+        I_vals = (V0 - Vc_vals) / R
+    else:
+        I_vals = -Vc_vals / R
 
-    # circuito
-    width = 6
-    height = 3
-    perimeter = 2*(width + height)
-
-    N = 40
-    s = np.linspace(0, perimeter, N)
-
-    def pos(s):
-        s = s % perimeter
-
-        if s < width:
-            return s, 0
-        elif s < width + height:
-            return width, s - width
-        elif s < 2*width + height:
-            return width - (s - (width + height)), height
-        else:
-            return 0, height - (s - (2*width + height))
-
-    # ---------------------------
-    # LOOP
-    # ---------------------------
-    for k in range(0, len(t_vals), 2):
-
-        if meu_id != sim_id:
-            return
-
-        clear_output(wait=True)
-
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
-
-        v = i_vals[k]
-
-        # suavização
-        vel = np.tanh(v) if abs(v) >= 0.02 else 0
-
-        s += vel * (t_vals[1]-t_vals[0]) * 3
-        s = np.mod(s, perimeter)
-
-        xs, ys = [], []
-        for si in s:
-            x, y = pos(si)
-            xs.append(x)
-            ys.append(y)
-
-        # =========================
-        # CIRCUITO RC
-        # =========================
-        ax1.plot([0,width],[0,0],'k',lw=2)
-        ax1.plot([width,width],[0,height],'k',lw=2)
-        ax1.plot([width,0],[height,height],'k',lw=2)
-        ax1.plot([0,0],[height,0],'k',lw=2)
-
-        # resistor
-        x_r = np.linspace(1, 2.5, 10)
-        y_r = 0.2*np.sin(np.linspace(0, 6*np.pi, 10))
-        ax1.plot(x_r, y_r, 'k', lw=2)
-
-        # capacitor
-        ax1.plot([3.5,3.5],[height-0.5,height+0.5],'k',lw=3)
-        ax1.plot([4,4],[height-0.5,height+0.5],'k',lw=3)
-
-        # elétrons
-        color = 'blue' if v > 0 else 'red'
-        ax1.scatter(xs, ys, s=40, c=color)
-
-        # seta
-        ax1.arrow(width/2, -0.5, np.sign(v)*1.0, 0,
-                  head_width=0.2, length_includes_head=True)
-
-        ax1.set_xlim(-1, width+2)
-        ax1.set_ylim(-1, height+2)
-        ax1.set_title("Circuito RC (RK4)")
-        ax1.axis('off')
-
-        # =========================
-        # GRÁFICO
-        # =========================
-        ax2.plot(t_vals[:k], i_vals[:k])
-        ax2.axvline(t_vals[k], linestyle='--')
-
-        ax2.set_xlabel("Tempo (s)")
-        ax2.set_ylabel("Corrente i(t) (A)")
-        ax2.set_title("Descarga do capacitor")
-        ax2.grid()
-
-        ax2.set_xlim(0, 20)
-        ax2.set_ylim(min(i_vals)*1.2, max(i_vals)*1.2)
-
-        tau = R*C
-
-        plt.suptitle(
-            f"R = {R:.2f} Ω | C = {C:.2f} F | q₀ = {q0:.2f} C | τ = {tau:.2f} s\n"
-            f"i(t) = {v:.3f} A  |  t = {t_vals[k]:.2f} s"
-        )
-
-        plt.tight_layout()
-        plt.show()
-
-        time.sleep(0.03)
+    return t_vals, Vc_vals, I_vals
 
 
 # ---------------------------
-# INTERFACE
+# PLOT 
+# ---------------------------
+def plotar_RC(R, C_micro, V0, modo):
+
+    t, Vc, I = simular_RC(R, C_micro, V0, modo=modo)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
+
+    ax1.plot(t, Vc)
+    ax1.set_title("Tensão no Capacitor")
+    ax1.set_xlabel("Tempo (s)")
+    ax1.set_ylabel("Vc (V)")
+    ax1.grid()
+
+    ax2.plot(t, I)
+    ax2.set_title("Corrente no Circuito")
+    ax2.set_xlabel("Tempo (s)")
+    ax2.set_ylabel("I (A)")
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+
+# ---------------------------
+# INTERFACE 
 # ---------------------------
 widgets.interact(
-    simular,
-    R=widgets.FloatSlider(min=0.1, max=10, step=0.1, value=1, description="R (Ω)"),
-    C=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="C (F)"),
-    q0=widgets.FloatSlider(min=0.1, max=5, step=0.1, value=1, description="qo (C)")
+    plotar_RC,
+    R=widgets.FloatSlider(min=1, max=1000, step=1, value=100, description="R (Ω)"),
+    C_micro=widgets.FloatSlider(min=1, max=1000, step=1, value=100, description="C (µF)"),
+    V0=widgets.FloatSlider(min=1, max=10, step=0.5, value=5, description="V0 (V)"),
+    modo=widgets.Dropdown(options=["Carga", "Descarga"], value="Carga")
 )
