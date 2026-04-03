@@ -36,7 +36,7 @@ def RK4(f, a, b, N, r):
 # ---------------------------
 def simular(theta0, omega0, L, g, m):
 
-    # 🔥 f agora vive aqui dentro
+    # sistema de equações
     def f(r, t):
         theta = r[0]
         omega = r[1]
