@@ -1,0 +1,143 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import ipywidgets as widgets
+
+# ---------------------------
+# RK4
+# ---------------------------
+def RK4(f, a, b, N, r):
+
+    h = (b - a) / N
+    tpontos = np.linspace(a, b, N+1)
+    r = np.array(r, float)
+
+    theta1pontos = [r[0]]
+    omega1pontos = [r[1]]
+    theta2pontos = [r[2]]
+    omega2pontos = [r[3]]
+
+    for i in range(N):
+        t = tpontos[i]
+
+        k1 = h * f(r, t)
+        k2 = h * f(r + 0.5*k1, t + 0.5*h)
+        k3 = h * f(r + 0.5*k2, t + 0.5*h)
+        k4 = h * f(r + k3, t + h)
+
+        r = r + (k1 + 2*k2 + 2*k3 + k4) / 6
+
+        theta1pontos.append(r[0])
+        omega1pontos.append(r[1])
+        theta2pontos.append(r[2])
+        omega2pontos.append(r[3])
+
+    return (tpontos,
+            np.array(theta1pontos),
+            np.array(omega1pontos),
+            np.array(theta2pontos),
+            np.array(omega2pontos))
+
+# ---------------------------
+# SIMULAÇÃO
+# ---------------------------
+def simular(theta1_0, theta2_0, L1, L2, g, m1, m2):
+
+    def f(r, t):
+        theta1, w1, theta2, w2 = r
+
+        delta = theta2 - theta1
+
+        den1 = (m1 + m2)*L1 - m2*L1*np.cos(delta)**2
+
+        a1 = (
+            m2*L1*w1**2*np.sin(delta)*np.cos(delta)
+            + m2*g*np.sin(theta2)*np.cos(delta)
+            + m2*L2*w2**2*np.sin(delta)
+            - (m1 + m2)*g*np.sin(theta1)
+        ) / den1
+
+        den2 = (L2/L1)*den1
+
+        a2 = (
+            -m2*L2*w2**2*np.sin(delta)*np.cos(delta)
+            + (m1 + m2)*g*np.sin(theta1)*np.cos(delta)
+            - (m1 + m2)*L1*w1**2*np.sin(delta)
+            - (m1 + m2)*g*np.sin(theta2)
+        ) / den2
+
+        return np.array([w1, a1, w2, a2], float)
+
+    # condição inicial
+    r0 = [
+        np.radians(theta1_0), 0,
+        np.radians(theta2_0), 0
+    ]
+
+    t_vals, theta1, omega1, theta2, omega2 = RK4(f, 0, 10, 2000, r0)
+
+    # índice para mostrar info (último tempo)
+    i = -1
+
+    # ---------------------------
+    # GRÁFICOS
+    # ---------------------------
+    fig, axs = plt.subplots(1, 2, figsize=(12,4))
+
+    # θ(t)
+    axs[0].plot(t_vals, theta1, label="θ1")
+    axs[0].plot(t_vals, theta2, label="θ2")
+    axs[0].set_title("Ângulos θ(t)")
+    axs[0].set_xlabel("t (s)")
+    axs[0].set_ylabel("θ (rad)")
+    axs[0].grid(True)
+    axs[0].legend()
+
+    # ω(t)
+    axs[1].plot(t_vals, omega1, label="ω1")
+    axs[1].plot(t_vals, omega2, label="ω2")
+    axs[1].set_title("Velocidades ω(t)")
+    axs[1].set_xlabel("t (s)")
+    axs[1].set_ylabel("ω (rad/s)")
+    axs[1].grid(True)
+    axs[1].legend()
+
+    # ---------------------------
+    # TEXTO
+    # ---------------------------
+    texto = (
+        f"m1 = {m1:.2f} kg\n"
+        f"m2 = {m2:.2f} kg\n"
+        f"L1 = {L1:.2f} m\n"
+        f"L2 = {L2:.2f} m\n"
+        f"g = {g:.2f} m/s²\n\n"
+        f"θ1 = {np.degrees(theta1[i]):.2f}°\n"
+        f"θ2 = {np.degrees(theta2[i]):.2f}°\n\n"
+        f"ω1 = {omega1[i]:.2f} rad/s\n"
+        f"ω2 = {omega2[i]:.2f} rad/s"
+    )
+
+    # coloca o texto ao lado do gráfico da direita
+    axs[1].text(
+        1.05, 0.5, texto,
+        transform=axs[1].transAxes,
+        fontsize=10,
+        verticalalignment='center',
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+    )
+
+    plt.tight_layout()
+    plt.show()
+
+# ---------------------------
+# SLIDERS
+# ---------------------------
+widgets.interact(
+    simular,
+    theta1_0=widgets.FloatSlider(min=1, max=120, step=1, value=60, description="θ1₀"),
+    theta2_0=widgets.FloatSlider(min=1, max=120, step=1, value=30, description="θ2₀"),
+    L1=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L1"),
+    L2=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L2"),
+    g=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g"),
+    m1=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m1"),
+    m2=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m2")
+)
