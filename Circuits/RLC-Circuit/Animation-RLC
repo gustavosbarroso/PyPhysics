@@ -36,7 +36,7 @@ def RK4(f, a, b, N, r):
 # ---------------------------
 def simular(R, L, C, q0):
 
-    # sistema dinâmico (estilo pêndulo)
+    # circuito
     def f(r, t):
         q = r[0]
         i = r[1]
