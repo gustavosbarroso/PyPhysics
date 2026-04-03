@@ -152,7 +152,7 @@ def simular(R, L, C, q0):
         ax2.set_ylim(min(i_vals)*1.2, max(i_vals)*1.2)
 
         # =========================
-        # TEXTO (estilo pêndulo)
+        # TEXTO 
         # =========================
         texto = (
             f"R = {R:.2f} Ω\n"
