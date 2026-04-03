@@ -5,23 +5,7 @@ from IPython.display import clear_output
 import time
 
 # ---------------------------
-# Constantes (valores iniciais)
-# ---------------------------
-g = 9.81
-l = 0.10
-
-# ---------------------------
-# Sistema de equações
-# ---------------------------
-def f(r, t):
-    theta = r[0]
-    omega = r[1]
-    ftheta = omega
-    fomega = -(g/l) * np.sin(theta)
-    return np.array([ftheta, fomega], float)
-
-# ---------------------------
-# RK4
+# RK4 (igual ao seu)
 # ---------------------------
 def RK4(f, a, b, N, r):
 
@@ -34,7 +18,7 @@ def RK4(f, a, b, N, r):
 
     for i in range(N):
         t = tpontos[i]
-        
+
         k1 = h * f(r, t)
         k2 = h * f(r + 0.5*k1, t + 0.5*h)
         k3 = h * f(r + 0.5*k2, t + 0.5*h)
@@ -48,13 +32,17 @@ def RK4(f, a, b, N, r):
     return tpontos, np.array(thetapontos), np.array(omegapontos)
 
 # ---------------------------
-# ANIMAÇÃO
+# ANIMAÇÃO (SEM GLOBAL)
 # ---------------------------
-def simular(theta0, omega0, L, G, m):
+def simular(theta0, omega0, L, g, m):
 
-    global g, l
-    g = G
-    l = L
+    # 🔥 f agora vive aqui dentro
+    def f(r, t):
+        theta = r[0]
+        omega = r[1]
+        ftheta = omega
+        fomega = -(g/l) * np.sin(theta)
+        return np.array([ftheta, fomega], float)
 
     r0 = [np.radians(theta0), omega0]
 
@@ -64,7 +52,6 @@ def simular(theta0, omega0, L, G, m):
     y = -L * np.cos(theta_vals)
 
     limite = L * 1.2
-
     T_teorico = 2*np.pi*np.sqrt(L/g)
 
     for i in range(0, len(t_vals), 5):
@@ -73,7 +60,6 @@ def simular(theta0, omega0, L, G, m):
 
         fig, ax = plt.subplots(figsize=(6,6))
 
-        # pêndulo (massa influencia o tamanho visual 👀)
         tamanho = 6 + 4*m
         ax.plot([0, x[i]], [0, y[i]], 'k-', lw=2)
         ax.plot(x[i], y[i], 'ro', markersize=tamanho)
@@ -83,18 +69,17 @@ def simular(theta0, omega0, L, G, m):
         ax.set_ylim(-limite, limite)
         ax.set_aspect('equal')
         ax.grid(alpha=0.3)
-        #Títulos
+
         ax.set_title(f"Pêndulo (t = {t_vals[i]:.2f} s)")
         ax.set_xlabel("x (m)")
         ax.set_ylabel("y (m)")
 
         # ---------------------------
-        # CAIXA DE INFORMAÇÕES
+        # INFORMAÇÕES
         # ---------------------------
         theta_deg = np.degrees(theta_vals[i])
         omega = omega_vals[i]
 
-        # energia com massa
         K = 0.5 * m * (L**2) * omega**2
         U = m * g * L * (1 - np.cos(theta_vals[i]))
         E = K + U
@@ -128,6 +113,6 @@ widgets.interact(
     theta0=widgets.FloatSlider(min=1, max=120, step=1, value=30, description="θ₀ (°)"),
     omega0=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω₀"),
     L=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L (m)"),
-    G=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g"),
+    g=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g"),
     m=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m (kg)")
-);
+)
