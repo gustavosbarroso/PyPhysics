@@ -1,149 +1,133 @@
+# Imports
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
+from IPython.display import clear_output
 
 # ---------------------------
-# SIMULAÇÃO
+# Função do sistema
 # ---------------------------
-def simular(theta0_graus, comparar, comparar_linear, slide, mostrar_resposta):
+def f(r, t, g, L):
+    theta, omega = r
+    return np.array([omega, -(g/L)*np.sin(theta)], float)
 
-    g = 9.81
-    L = 1
-    dt = 0.05
-    t_max = 20
+# ---------------------------
+# RK4
+# ---------------------------
+def RK4(f, a, b, N, r, g, L):
+    h = (b - a) / N
+    tpontos = np.linspace(a, b, N+1)
+    r = np.array(r, float)
 
-    def resolver(theta0):
-        theta = theta0
-        omega = 0
+    thetapontos = [r[0]]
+    omegapontos = [r[1]]
 
-        t_vals = []
-        theta_vals = []
-        energia_vals = []
+    for i in range(N):
+        t = tpontos[i]
 
-        for t in np.arange(0, t_max, dt):
-            alpha = -(g/L)*np.sin(theta)
+        k1 = h * f(r, t, g, L)
+        k2 = h * f(r + 0.5*k1, t + 0.5*h, g, L)
+        k3 = h * f(r + 0.5*k2, t + 0.5*h, g, L)
+        k4 = h * f(r + k3, t + h, g, L)
 
-            omega += alpha * dt
-            theta += omega * dt
+        r = r + (k1 + 2*k2 + 2*k3 + k4) / 6
 
-            # Energia mecânica
-            E = 0.5*(L*omega)**2 + g*L*(1 - np.cos(theta))
+        thetapontos.append(r[0])
+        omegapontos.append(r[1])
 
-            t_vals.append(t)
-            theta_vals.append(theta)
-            energia_vals.append(E)
+    return tpontos, np.array(thetapontos), np.array(omegapontos)
 
-        return t_vals, theta_vals, energia_vals
+# ---------------------------
+# Simulação com sliders
+# ---------------------------
+def simular(theta0, omega0, L, g, m):
 
-    # -------- RESOLUÇÃO --------
-    t1, th1, E1 = resolver(np.radians(theta0_graus))
+    clear_output(wait=True)
 
-    # -------- PLOT --------
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,4))
+    # condição inicial
+    r0 = [np.radians(theta0), omega0]
+
+    tpontos, thetapontos, omegapontos = RK4(
+        f, 0, 10, 1000, r0, g, L
+    )
+
+    # ---------------------------
+    # Energia
+    # ---------------------------
+    K = 0.5 * m * (L**2) * (omegapontos**2)
+    U = m * g * L * (1 - np.cos(thetapontos))
+    E = K + U
+
+    # período teórico
+    T_teorico = 2*np.pi*np.sqrt(L/g)
+
+    # período numérico
+    cruzamentos = []
+    for i in range(1, len(thetapontos)):
+        if thetapontos[i-1] > 0 and thetapontos[i] < 0:
+            cruzamentos.append(tpontos[i])
+
+    T_numerico = None
+    if len(cruzamentos) >= 2:
+        T_numerico = 2*(cruzamentos[1] - cruzamentos[0])
+
+    # ---------------------------
+    # Plots
+    # ---------------------------
+    fig, axs = plt.subplots(1, 3, figsize=(15, 4))
 
     # θ(t)
-    ax1.plot(t1, th1, label=f"θ₀ = {theta0_graus}°")
+    axs[0].plot(tpontos, thetapontos)
+    axs[0].set_title("θ(t)")
+    axs[0].set_xlabel("t (s)")
+    axs[0].set_ylabel("θ (rad)")
+    axs[0].grid(True)
 
-    if comparar:
-        t2, th2, _ = resolver(np.radians(theta0_graus + 1))
-        ax1.plot(t2, th2, '--', label=f"θ₀ = {theta0_graus+1}°")
-
-    if comparar_linear:
-        omega0 = np.sqrt(g/L)
-        th_lin = np.radians(theta0_graus)*np.cos(omega0*np.array(t1))
-        ax1.plot(t1, th_lin, ':', label="Aprox. linear")
-
-    ax1.set_xlabel("Tempo")
-    ax1.set_ylabel("θ (rad)")
-    ax1.set_title("Pêndulo simples")
-    ax1.legend()
-    ax1.grid()
+    # ω(t)
+    axs[1].plot(tpontos, omegapontos)
+    axs[1].set_title("ω(t)")
+    axs[1].set_xlabel("t (s)")
+    axs[1].set_ylabel("ω (rad/s)")
+    axs[1].grid(True)
 
     # Energia
-    ax2.plot(t1, E1)
-    ax2.set_title("Energia mecânica")
-    ax2.set_xlabel("Tempo")
-    ax2.grid()
+    axs[2].plot(tpontos, K, label="K")
+    axs[2].plot(tpontos, U, label="U")
+    axs[2].plot(tpontos, E, linestyle="--", label="E")
+
+    axs[2].set_title("Energia")
+    axs[2].set_xlabel("t (s)")
+    axs[2].set_ylabel("E (J)")
+    axs[2].grid(True)
+    axs[2].legend()
 
     plt.tight_layout()
     plt.show()
 
-    print("\n" + "="*50)
-
     # ---------------------------
-    # PERGUNTAS + RESPOSTAS (SEU FORMATO)
+    # Resultados
     # ---------------------------
+    print(f"θ₀ = {theta0:.1f}° | ω₀ = {omega0:.2f} rad/s")
+    print(f"L = {L:.2f} m | g = {g:.2f} m/s² | m = {m:.2f} kg")
 
-    if slide == "Explorar":
-        print("👀 Perguntas:")
-        print("- O movimento parece sempre igual?")
-        print("- O período muda com o ângulo?")
+    print(f"T teórico (pequenas oscilações) = {T_teorico:.4f} s")
 
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Não, o movimento muda para ângulos grandes.")
-            print("- Sim, o período aumenta com o ângulo.")
+    if T_numerico:
+        print(f"T numérico ≈ {T_numerico:.4f} s")
 
-    elif slide == "Pequenos vs grandes ângulos":
-        print("⚖️ Perguntas:")
-        print("- Qual demora mais para oscilar?")
-        print("- Isso bate com a fórmula tradicional?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Ângulos maiores → maior período.")
-            print("- Não, pois a fórmula clássica ignora a amplitude.")
-
-    elif slide == "Aproximação":
-        print("🧠 Perguntas:")
-        print("- Quando sin(θ) ≈ θ funciona bem?")
-        print("- O que falha para ângulos grandes?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Funciona para ângulos pequenos (~até 10°).")
-            print("- O seno cresce mais lentamente → movimento desacelera.")
-
-    elif slide == "Energia":
-        print("⚡ Perguntas:")
-        print("- A energia total muda com o tempo?")
-        print("- Onde ela está armazenada?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Não, a energia mecânica é conservada.")
-            print("- Parte cinética (movimento) e parte potencial (altura).")
-
-    elif slide == "Forma do movimento":
-        print("📉 Perguntas:")
-        print("- O gráfico é uma senoide perfeita?")
-        print("- O que muda para ângulos grandes?")
-
-        if mostrar_resposta:
-            print("\n✅ Respostas:")
-            print("- Só para ângulos pequenos.")
-            print("- O gráfico achata nos extremos → sistema não linear.")
+        if theta0 > 20:
+            print("⚠️ Ângulo grande → fórmula teórica não é mais precisa")
+    else:
+        print("Não foi possível calcular T numérico")
 
 # ---------------------------
-# INTERFACE
+# Widgets
 # ---------------------------
 widgets.interact(
     simular,
-    theta0_graus=widgets.IntSlider(min=1, max=170, step=1, value=30),
-    comparar=widgets.Checkbox(value=False, description="Comparar θ₀ + 1°"),
-    comparar_linear=widgets.Checkbox(value=False, description="Comparar linear"),
-    slide=widgets.Dropdown(
-        options=[
-            "Explorar",
-            "Pequenos vs grandes ângulos",
-            "Aproximação",
-            "Energia",
-            "Forma do movimento"
-        ],
-        value="Explorar"
-    ),
-    mostrar_resposta=widgets.Checkbox(
-        value=False,
-        description="Mostrar resposta"
-    )
+    theta0=widgets.FloatSlider(min=1, max=120, step=1, value=10, description="θ₀ (°)"),
+    omega0=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω₀ (rad/s)"),
+    L=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L (m)"),
+    g=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g (m/s²)"),
+    m=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m (kg)")
 );
