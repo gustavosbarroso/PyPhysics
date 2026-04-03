@@ -1,83 +1,133 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import ipywidgets as widgets
 from IPython.display import clear_output
 import time
 
+# ---------------------------
+# Constantes (valores iniciais)
+# ---------------------------
 g = 9.81
+l = 0.10
 
 # ---------------------------
-# SIMULAÇÃO
+# Sistema de equações
 # ---------------------------
-def pendulo_simples(theta0, omega0, L, t_max=10, dt=0.02):
+def f(r, t):
+    theta = r[0]
+    omega = r[1]
+    ftheta = omega
+    fomega = -(g/l) * np.sin(theta)
+    return np.array([ftheta, fomega], float)
 
-    theta = np.radians(theta0)
-    omega = omega0
+# ---------------------------
+# RK4
+# ---------------------------
+def RK4(f, a, b, N, r):
 
-    t_vals = []
-    theta_vals = []
+    h = (b - a) / N
+    tpontos = np.linspace(a, b, N+1)
+    r = np.array(r, float)
 
-    for t in np.arange(0, t_max, dt):
+    thetapontos = [r[0]]
+    omegapontos = [r[1]]
 
-        alpha = -(g / L) * np.sin(theta)
+    for i in range(N):
+        t = tpontos[i]
+        
+        k1 = h * f(r, t)
+        k2 = h * f(r + 0.5*k1, t + 0.5*h)
+        k3 = h * f(r + 0.5*k2, t + 0.5*h)
+        k4 = h * f(r + k3, t + h)
 
-        omega += alpha * dt
-        theta += omega * dt
+        r = r + (k1 + 2*k2 + 2*k3 + k4) / 6
 
-        t_vals.append(t)
-        theta_vals.append(theta)
+        thetapontos.append(r[0])
+        omegapontos.append(r[1])
 
-    return np.array(t_vals), np.array(theta_vals)
-
+    return tpontos, np.array(thetapontos), np.array(omegapontos)
 
 # ---------------------------
 # ANIMAÇÃO
 # ---------------------------
-def simular(theta0, w0, L):
+def simular(theta0, omega0, L, G, m):
 
-    t_vals, theta_vals = pendulo_simples(theta0, w0, L)
+    global g, l
+    g = G
+    l = L
+
+    r0 = [np.radians(theta0), omega0]
+
+    t_vals, theta_vals, omega_vals = RK4(f, 0, 10, 1000, r0)
 
     x = L * np.sin(theta_vals)
     y = -L * np.cos(theta_vals)
 
     limite = L * 1.2
 
+    T_teorico = 2*np.pi*np.sqrt(L/g)
+
     for i in range(0, len(t_vals), 5):
 
         clear_output(wait=True)
 
-        fig, ax = plt.subplots(figsize=(5,5))
+        fig, ax = plt.subplots(figsize=(6,6))
 
-        # haste
+        # pêndulo (massa influencia o tamanho visual 👀)
+        tamanho = 6 + 4*m
         ax.plot([0, x[i]], [0, y[i]], 'k-', lw=2)
-
-        # massa
-        ax.plot(x[i], y[i], 'ro', markersize=10)
-
-        # trajetória
+        ax.plot(x[i], y[i], 'ro', markersize=tamanho)
         ax.plot(x[:i], y[:i], 'r-', alpha=0.5)
 
         ax.set_xlim(-limite, limite)
         ax.set_ylim(-limite, limite)
-
         ax.set_aspect('equal')
         ax.grid(alpha=0.3)
-
-        ax.set_title(f"Pêndulo Simples (t = {t_vals[i]:.2f} s)")
+        #Títulos
+        ax.set_title(f"Pêndulo (t = {t_vals[i]:.2f} s)")
         ax.set_xlabel("x (m)")
         ax.set_ylabel("y (m)")
 
+        # ---------------------------
+        # CAIXA DE INFORMAÇÕES
+        # ---------------------------
+        theta_deg = np.degrees(theta_vals[i])
+        omega = omega_vals[i]
+
+        # energia com massa
+        K = 0.5 * m * (L**2) * omega**2
+        U = m * g * L * (1 - np.cos(theta_vals[i]))
+        E = K + U
+
+        texto = (
+            f"m = {m:.2f} kg\n"
+            f"L = {L:.2f} m\n"
+            f"g = {g:.2f} m/s²\n\n"
+            f"θ = {theta_deg:.2f}°\n"
+            f"ω = {omega:.2f} rad/s\n\n"
+            f"E = {E:.3f} J\n"
+            f"T ≈ {T_teorico:.3f} s"
+        )
+
+        ax.text(
+            1.05, 0.5, texto,
+            transform=ax.transAxes,
+            fontsize=10,
+            verticalalignment='center',
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+        )
+
         plt.show()
-
         time.sleep(0.02)
-
 
 # ---------------------------
 # WIDGETS
 # ---------------------------
 widgets.interact(
     simular,
-    theta0=widgets.FloatSlider(min=1, max=170, step=1, value=30, description="θ₀ (°)"),
-    w0=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω₀ (rad/s)"),
-    L=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L (m)")
+    theta0=widgets.FloatSlider(min=1, max=120, step=1, value=30, description="θ₀ (°)"),
+    omega0=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω₀"),
+    L=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L (m)"),
+    G=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g"),
+    m=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m (kg)")
 );
