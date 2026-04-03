@@ -1,63 +1,87 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import ipywidgets as widgets
-from scipy.integrate import solve_ivp
 from IPython.display import clear_output
 import time
 
-g = 9.81  # m/s²
-
 # ---------------------------
-# EDO
+# RK4 
 # ---------------------------
-def pendulo_duplo(t, y, m1, m2, L1, L2):
-    theta1, w1, theta2, w2 = y
+def RK4(f, a, b, N, r):
 
-    delta = theta2 - theta1
+    h = (b - a) / N
+    tpontos = np.linspace(a, b, N+1)
+    r = np.array(r, float)
 
-    den1 = (m1 + m2)*L1 - m2*L1*np.cos(delta)**2
+    theta1pontos = [r[0]]
+    omega1pontos = [r[1]]
+    theta2pontos = [r[2]]
+    omega2pontos = [r[3]]
 
-    a1 = (
-        m2*L1*w1**2*np.sin(delta)*np.cos(delta)
-        + m2*g*np.sin(theta2)*np.cos(delta)
-        + m2*L2*w2**2*np.sin(delta)
-        - (m1 + m2)*g*np.sin(theta1)
-    ) / den1
+    for i in range(N):
+        t = tpontos[i]
 
-    den2 = (L2/L1)*den1
+        k1 = h * f(r, t)
+        k2 = h * f(r + 0.5*k1, t + 0.5*h)
+        k3 = h * f(r + 0.5*k2, t + 0.5*h)
+        k4 = h * f(r + k3, t + h)
 
-    a2 = (
-        -m2*L2*w2**2*np.sin(delta)*np.cos(delta)
-        + (m1 + m2)*g*np.sin(theta1)*np.cos(delta)
-        - (m1 + m2)*L1*w1**2*np.sin(delta)
-        - (m1 + m2)*g*np.sin(theta2)
-    ) / den2
+        r = r + (k1 + 2*k2 + 2*k3 + k4) / 6
 
-    return [w1, a1, w2, a2]
+        theta1pontos.append(r[0])
+        omega1pontos.append(r[1])
+        theta2pontos.append(r[2])
+        omega2pontos.append(r[3])
 
+    return (tpontos,
+            np.array(theta1pontos),
+            np.array(omega1pontos),
+            np.array(theta2pontos),
+            np.array(omega2pontos))
 
 # ---------------------------
 # SIMULAÇÃO
 # ---------------------------
-def simular(theta1, theta2, w1, w2, m1, m2, L1, L2):
+def simular(theta1_0, theta2_0, L1, L2, g, m1, m2):
 
-    y0 = [np.radians(theta1), w1, np.radians(theta2), w2]
+    # dinâmica do sistema
+    def f(r, t):
+        theta1 = r[0]
+        w1     = r[1]
+        theta2 = r[2]
+        w2     = r[3]
 
-    t_span = (0, 10)
-    t_eval = np.linspace(0, 10, 400)
+        delta = theta2 - theta1
 
-    sol = solve_ivp(
-        pendulo_duplo,
-        t_span,
-        y0,
-        t_eval=t_eval,
-        args=(m1, m2, L1, L2),
-        method='RK45'
-    )
+        den1 = (m1 + m2)*L1 - m2*L1*np.cos(delta)**2
 
-    theta1 = sol.y[0]
-    theta2 = sol.y[2]
+        a1 = (
+            m2*L1*w1**2*np.sin(delta)*np.cos(delta)
+            + m2*g*np.sin(theta2)*np.cos(delta)
+            + m2*L2*w2**2*np.sin(delta)
+            - (m1 + m2)*g*np.sin(theta1)
+        ) / den1
 
+        den2 = (L2/L1)*den1
+
+        a2 = (
+            -m2*L2*w2**2*np.sin(delta)*np.cos(delta)
+            + (m1 + m2)*g*np.sin(theta1)*np.cos(delta)
+            - (m1 + m2)*L1*w1**2*np.sin(delta)
+            - (m1 + m2)*g*np.sin(theta2)
+        ) / den2
+
+        return np.array([w1, a1, w2, a2], float)
+
+    # condição inicial
+    r0 = [
+        np.radians(theta1_0), 0,
+        np.radians(theta2_0), 0
+    ]
+
+    t_vals, theta1, omega1, theta2, omega2 = RK4(f, 0, 10, 2000, r0)
+
+    # posições
     x1 = L1 * np.sin(theta1)
     y1 = -L1 * np.cos(theta1)
 
@@ -66,63 +90,94 @@ def simular(theta1, theta2, w1, w2, m1, m2, L1, L2):
 
     limite = L1 + L2
 
-    for i in range(0, len(t_eval), 10):
+    # ---------------------------
+    # ANIMAÇÃO
+    # ---------------------------
+    for i in range(0, len(t_vals), 5):
+
         clear_output(wait=True)
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,5))
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,6))
+
+        tamanho1 = 6 + 4*m1
+        tamanho2 = 6 + 4*m2
 
         # ---------------------------
-        # PÊNDULO
+        # 🔵 PÊNDULO (esquerda)
         # ---------------------------
         ax1.plot([0, x1[i]], [0, y1[i]], 'k-', lw=2)
         ax1.plot([x1[i], x2[i]], [y1[i], y2[i]], 'k-', lw=2)
 
-        ax1.plot(x1[i], y1[i], 'ro', label="m1")
-        ax1.plot(x2[i], y2[i], 'bo', label="m2")
+        ax1.plot(x1[i], y1[i], 'ro', markersize=tamanho1)
+        ax1.plot(x2[i], y2[i], 'bo', markersize=tamanho2)
+
+        ax1.plot(x2[:i], y2[:i], 'b-', alpha=0.5)
 
         ax1.set_xlim(-limite, limite)
         ax1.set_ylim(-limite, limite)
-
-        ax1.set_title(f"Pêndulo Duplo (t = {t_eval[i]:.2f} s)")
-        ax1.set_xlabel("x (m)")
-        ax1.set_ylabel("y (m)")
         ax1.set_aspect('equal')
         ax1.grid(alpha=0.3)
-        ax1.legend()
+
+        ax1.set_title(f"Pêndulo Duplo (t = {t_vals[i]:.2f} s)")
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
 
         # ---------------------------
-        # TRAJETÓRIA
+        # 🔴 TRAJETÓRIA (direita)
         # ---------------------------
-        ax2.plot(x1[:i], y1[:i], 'r-', alpha=0.7, label="massa 1")
-        ax2.plot(x2[:i], y2[:i], 'b-', alpha=0.7, label="massa 2")
+        ax2.plot(x1, y1, 'r-', alpha=0.5, label="massa 1")
+        ax2.plot(x2, y2, 'b-', alpha=0.5, label="massa 2")
 
-        ax2.set_xlim(-limite, limite)
-        ax2.set_ylim(-limite, limite)
+        ax2.plot(x1[i], y1[i], 'ro')
+        ax2.plot(x2[i], y2[i], 'bo')
 
-        ax2.set_title("Trajetórias no plano")
-        ax2.set_xlabel("x (m)")
-        ax2.set_ylabel("y (m)")
         ax2.set_aspect('equal')
         ax2.grid(alpha=0.3)
+        ax2.set_title("Trajetória (x,y)")
+        ax2.set_xlabel("x (m)")
+        ax2.set_ylabel("y (m)")
         ax2.legend()
+
+        # ---------------------------
+        # 📊 TEXTO
+        # ---------------------------
+        texto = (
+            f"m1 = {m1:.2f} kg\n"
+            f"m2 = {m2:.2f} kg\n"
+            f"L1 = {L1:.2f} m\n"
+            f"L2 = {L2:.2f} m\n"
+            f"g = {g:.2f} m/s²\n\n"
+            f"θ1 = {np.degrees(theta1[i]):.2f}°\n"
+            f"θ2 = {np.degrees(theta2[i]):.2f}°\n\n"
+            f"ω1 = {omega1[i]:.2f} rad/s\n"
+            f"ω2 = {omega2[i]:.2f} rad/s"
+        )
+
+        ax1.text(
+            1.05, 0.5, texto,
+            transform=ax1.transAxes,
+            fontsize=10,
+            verticalalignment='center',
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+        )
 
         plt.tight_layout()
         plt.show()
-
-        time.sleep(0.03)
-
+        time.sleep(0.02)
 
 # ---------------------------
 # WIDGETS
 # ---------------------------
 widgets.interact(
     simular,
-    theta1=widgets.FloatSlider(min=0, max=180, step=5, value=120, description="θ1 (°)"),
-    theta2=widgets.FloatSlider(min=0, max=180, step=5, value=100, description="θ2 (°)"),
-    w1=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω1 (rad/s)"),
-    w2=widgets.FloatSlider(min=-5, max=5, step=0.5, value=0, description="ω2 (rad/s)"),
-    m1=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="m1 (kg)"),
-    m2=widgets.FloatSlider(min=0.5, max=5, step=0.5, value=1, description="m2 (kg)"),
-    L1=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L1 (m)"),
-    L2=widgets.FloatSlider(min=0.5, max=2, step=0.1, value=1, description="L2 (m)"),
-);
+    theta1_0=widgets.FloatSlider(min=1, max=120, step=1, value=60, description="θ1₀"),
+    theta2_0=widgets.FloatSlider(min=1, max=120, step=1, value=30, description="θ2₀"),
+
+    L1=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L1 (m)"),
+    L2=widgets.FloatSlider(min=0.1, max=2.0, step=0.1, value=0.5, description="L2 (m)"),
+
+    g=widgets.FloatSlider(min=1.0, max=20.0, step=0.5, value=9.81, description="g"),
+
+    m1=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m1"),
+    m2=widgets.FloatSlider(min=0.1, max=5.0, step=0.1, value=1.0, description="m2")
+)
